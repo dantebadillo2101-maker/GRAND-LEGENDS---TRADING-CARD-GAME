@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>UI Clicks Test</title>
+</head>
+<body>
+  <div id="results">Running tests...</div>
+  <iframe id="gameFrame" src="../index.html" style="width:1000px; height:800px;"></iframe>
+  <script>
+    const frame = document.getElementById('gameFrame');
+    frame.onload = function() {
+      try {
+        const doc = frame.contentDocument || frame.contentWindow.document;
+        const win = frame.contentWindow;
+        const results = [];
+
+        // Test 1: Check no jsError is visible
+        const jsError = doc.getElementById('jsError');
+        const hasError = jsError && jsError.style.display !== 'none' && jsError.textContent;
+        results.push({ name: 'No JS Startup Error', pass: !hasError, detail: hasError ? jsError.textContent : 'Clean startup' });
+
+        // Test 2: Main Menu is open initially
+        const mainMenu = doc.getElementById('mainMenu');
+        results.push({ name: 'Main Menu initially open', pass: mainMenu && mainMenu.classList.contains('open') });
+
+        // Test 3: Click ¡ENTRAR EN BATALLA!
+        const playBtn = doc.querySelector('.menu-primary-cta .btn-hero-play');
+        if (playBtn) {
+          playBtn.click();
+          const localModal = doc.getElementById('localModeModal');
+          results.push({
+            name: 'Click ¡ENTRAR EN BATALLA! opens Local Mode Modal',
+            pass: localModal && localModal.classList.contains('open')
+          });
+          // Close local modal to return to menu
+          if (win.closeLocalMode && win.openMainMenu) {
+            win.closeLocalMode();
+            win.openMainMenu();
+          }
+        } else {
+          results.push({ name: 'Play button exists', pass: false });
+        }
+
+        // Test 4: Click Constructor de Mazos
+        const deckCard = doc.querySelector('.menu-card[onclick*="openDeckBuilderFromMenu"]');
+        if (deckCard) {
+          deckCard.click();
+          const deckModal = doc.getElementById('deckModal');
+          results.push({
+            name: 'Click Constructor de Mazos opens Deck Modal',
+            pass: deckModal && deckModal.classList.contains('open')
+          });
+          if (win.closeDeck) win.closeDeck();
+        }
+
+        // Test 5: Click Apertura de Sobres
+        const packCard = doc.querySelector('.menu-card[onclick*="openPack"]');
+        if (packCard) {
+          packCard.click();
+          const packModal = doc.getElementById('packModal');
+          results.push({
+            name: 'Click Apertura de Sobres opens Pack Modal',
+            pass: packModal && packModal.classList.contains('open')
+          });
+          if (win.closePack) win.closePack();
+        }
+
+        // Test 6: Click Catálogo de Sets
+        const setsCard = doc.querySelector('.menu-card[onclick*="openSets"]');
+        if (setsCard) {
+          setsCard.click();
+          const setsModal = doc.getElementById('setsModal');
+          results.push({
+            name: 'Click Catálogo de Sets opens Sets Modal',
+            pass: setsModal && setsModal.classList.contains('open')
+          });
+          if (win.closeSets) win.closeSets();
+        }
+
+        // Test 7: Click Guía & Tácticas
+        const guideCard = doc.querySelector('.menu-card[onclick*="openPlayerHub"]');
+        if (guideCard) {
+          guideCard.click();
+          const hubModal = doc.getElementById('playerHubModal');
+          const tacticsPanel = doc.getElementById('hubPanelTactics');
+          results.push({
+            name: 'Click Guía & Tácticas opens Player Hub Modal with Tactics',
+            pass: hubModal && hubModal.classList.contains('open') && tacticsPanel && tacticsPanel.classList.contains('active')
+          });
+          if (win.closePlayerHub) win.closePlayerHub();
+        }
+
+        // Test 8: Perspective 3D toggle button
+        const btnToggle = doc.getElementById('btnTogglePerspective');
+        const arena = doc.getElementById('battleArena');
+        if (btnToggle && arena) {
+          const initHas = arena.classList.contains('mode-3d');
+          btnToggle.click();
+          const afterHas = arena.classList.contains('mode-3d');
+          results.push({
+            name: '3D Perspective toggle works',
+            pass: initHas !== afterHas
+          });
+        }
+
+        // Report
+        const allPassed = results.every(r => r.pass);
+        const resDiv = document.getElementById('results');
+        resDiv.innerHTML = '<h3>' + (allPassed ? 'ALL UI TESTS PASSED' : 'SOME UI TESTS FAILED') + '</h3>' +
+          '<ul>' + results.map(r => '<li style="color:' + (r.pass ? 'green' : 'red') + '">' + (r.pass ? '✓' : '✗') + ' ' + r.name + (r.detail ? ' (' + r.detail + ')' : '') + '</li>').join('') + '</ul>';
+      } catch (err) {
+        document.getElementById('results').innerText = 'EXCEPTION: ' + err.message + '\n' + err.stack;
+      }
+    };
+  </script>
+</body>
+</html>

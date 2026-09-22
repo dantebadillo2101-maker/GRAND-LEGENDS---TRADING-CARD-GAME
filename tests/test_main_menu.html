@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Grand Legends TCG - Test Menú Principal Lobby Legendario</title>
+  <style>
+    body { font-family: monospace; background: #121214; color: #e1e1e6; padding: 20px; }
+    .pass { color: #04d361; }
+    .fail { color: #ff5555; font-weight: bold; }
+    .summary { margin-top: 20px; font-size: 1.2em; border-top: 1px solid #333; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Grand Legends TCG — Lobby Legendario Test Suite</h1>
+  <div id="test-results"></div>
+  <div id="test-summary" class="summary"></div>
+
+  <!-- Mock DOM completo con los elementos del menú principal y modales -->
+  <div class="modal open" id="mainMenu">
+    <div class="modalbox menu-modalbox">
+      <div class="user-status-strip">
+        <div class="player-profile-badge">
+          <span id="menuUserName">Jugador</span>
+          <span id="menuUserRankBadge">Novato</span>
+          <b id="menuUserLevel">1</b>
+          <div id="menuUserXpBar" style="width:25%"></div>
+        </div>
+        <div class="stats-pills-row">
+          <b id="collectionCount">0</b>
+          <b id="packCount">10</b>
+          <span id="packReadyBadge"></span>
+        </div>
+      </div>
+
+      <div class="menu-hero-showcase">
+        <div class="main-menu-hero">
+          <h1 id="mainMenuTitle" class="main-menu-title shimmer-logo">GRAND LEGENDS TCG</h1>
+        </div>
+        <div id="menuLeaderWidget" class="menu-leader-widget">
+          <span id="menuDeckStatusBadge" class="deck-status-pill"></span>
+          <div id="menuLeaderArt"></div>
+          <h4 id="menuLeaderName"></h4>
+          <b id="menuLeaderLife"></b>
+          <p id="menuLeaderAbility"></p>
+        </div>
+      </div>
+
+      <div class="menu-battle-strip menu-primary-cta">
+        <button type="button" class="btn-hero-play" onclick="openLocalMode()"></button>
+      </div>
+
+      <div class="menu-modules-grid">
+        <div class="menu-card theme-sapphire" onclick="openDeckBuilderFromMenu()">
+          <span id="menuModDeckBadge"></span>
+        </div>
+        <div class="menu-card theme-gold" onclick="openPack()">
+          <span id="menuModPackBadge"></span>
+        </div>
+        <div class="menu-card theme-emerald" onclick="openSets()"></div>
+        <div class="menu-card theme-amethyst" onclick="openPlayerHub('tactics')"></div>
+        <div class="menu-card theme-ruby" onclick="openPlayerHub('account')">
+          <span id="menuModWinsBadge"></span>
+        </div>
+        <div class="menu-card theme-slate" onclick="openPlayerHub('online')"></div>
+      </div>
+
+      <div class="quests-board">
+        <div class="quest-card" id="questBattle">
+          <div id="questBattleBar"></div>
+          <span id="questBattleText"></span>
+        </div>
+        <div class="quest-card" id="questDeck">
+          <div id="questDeckBar"></div>
+          <span id="questDeckText"></span>
+        </div>
+        <div class="quest-card" id="questCollection">
+          <div id="questColBar"></div>
+          <span id="questColText"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="localModeModal"></div>
+  <div class="modal" id="deckModal"></div>
+  <div class="modal" id="deckLeaderPickerModal">
+    <div id="deckLeaderGrid"></div>
+  </div>
+
+  <!-- Scripts requeridos -->
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+
+  <script>
+    const resultsContainer = document.getElementById("test-results");
+    const summaryContainer = document.getElementById("test-summary");
+    let passed = 0;
+    let failed = 0;
+
+    function assert(condition, message) {
+      const div = document.createElement("div");
+      if (condition) {
+        passed++;
+        div.className = "pass";
+        div.textContent = "✔ PASS: " + message;
+      } else {
+        failed++;
+        div.className = "fail";
+        div.textContent = "✖ FAIL: " + message;
+      }
+      resultsContainer.appendChild(div);
+      console.log(div.textContent);
+    }
+
+    // 1. Menú principal abierto inicialmente
+    const menuEl = document.getElementById('mainMenu');
+    assert(menuEl && menuEl.classList.contains('open'), "El Menú Principal está presente y abierto con clase 'open'");
+
+    // 2. renderMainMenuState es función exportada
+    assert(typeof window.renderMainMenuState === 'function', "renderMainMenuState está exportada en window");
+
+    // 3. Ejecutar renderMainMenuState
+    renderMainMenuState();
+
+    // 4. Datos del jugador actualizados
+    const userEl = document.getElementById('menuUserName');
+    assert(userEl && userEl.textContent.trim().length > 0, "El nombre de usuario se renderiza en el Menú Principal");
+
+    const rankEl = document.getElementById('menuUserRankBadge');
+    assert(rankEl && rankEl.textContent.trim().length > 0, "El rango honorífico del jugador se muestra en el badge");
+
+    const lvlEl = document.getElementById('menuUserLevel');
+    assert(lvlEl && parseInt(lvlEl.textContent) >= 1, "El nivel del jugador es igual o superior a 1 (Valor: " + lvlEl.textContent + ")");
+
+    // 5. Contadores de recursos
+    const packCountEl = document.getElementById('packCount');
+    assert(packCountEl && parseInt(packCountEl.textContent) >= 0, "El contador de sobres se renderiza numéricamente");
+
+    // 6. Widget del Líder Activo
+    const leaderArt = document.getElementById('menuLeaderArt');
+    const leaderName = document.getElementById('menuLeaderName');
+    const leaderLife = document.getElementById('menuLeaderLife');
+    assert(leaderArt && leaderArt.textContent.trim().length > 0, "El arte del Líder activo se renderiza en el widget");
+    assert(leaderName && leaderName.textContent.trim().length > 0, "El nombre del Líder activo se renderiza en el widget (" + leaderName.textContent + ")");
+    assert(leaderLife && parseInt(leaderLife.textContent) > 0, "La vida del Líder se renderiza correctamente (" + leaderLife.textContent + " ❤️)");
+
+    // 7. Estado del mazo en el widget y tarjeta
+    const deckBadge = document.getElementById('menuDeckStatusBadge');
+    assert(deckBadge && deckBadge.textContent.trim().length > 0, "La insignia de estado del mazo se actualiza en el widget");
+
+    const modDeckBadge = document.getElementById('menuModDeckBadge');
+    assert(modDeckBadge && modDeckBadge.textContent.trim().length > 0, "La tarjeta del Constructor de Mazos muestra el estado de la baraja");
+
+    // 8. Tablón de Misiones
+    const qBattle = document.getElementById('questBattle');
+    const qDeck = document.getElementById('questDeck');
+    const qCol = document.getElementById('questCollection');
+    assert(qBattle && qDeck && qCol, "Las 3 tarjetas de misiones del tablón están presentes en el DOM");
+
+    const qDeckText = document.getElementById('questDeckText');
+    assert(qDeckText && qDeckText.textContent.trim().length > 0, "La misión de baraja muestra el progreso actual");
+
+    // 9. Cambio dinámico de Líder actualiza el widget
+    if (typeof selectLeaderForCustomDeck === 'function') {
+      selectLeaderForCustomDeck('L002');
+      assert(document.getElementById('menuLeaderName').textContent === 'Roronoa Zoro', "selectLeaderForCustomDeck('L002') actualiza el widget a Roronoa Zoro en vivo");
+    }
+
+    // 10. Interacción con modo local
+    openLocalMode();
+    const localModal = document.getElementById('localModeModal');
+    assert(localModal && localModal.classList.contains('open'), "openLocalMode() abre el modal de modo local");
+
+    openMainMenu();
+    assert(menuEl.classList.contains('open'), "openMainMenu() reabre el Menú Principal con clase 'open'");
+
+    summaryContainer.innerHTML = "<strong>Total Pruebas: " + (passed + failed) + " | <span class='pass'>Pasadas: " + passed + "</span> | <span class='fail'>Fallidas: " + failed + "</span></strong>" +
+      (failed === 0 ? "<br><div class='pass' style='font-size:1.4em;margin-top:10px;'>★ TODAS LAS PRUEBAS DEL LOBBY LEGENDARIO PASARON CON EXITO ★</div>" : "");
+  </script>
+</body>
+</html>

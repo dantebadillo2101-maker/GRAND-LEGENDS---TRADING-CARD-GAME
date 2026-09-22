@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Debug Deck Visibility</title></head>
+<body>
+<iframe id="testFrame" src="../index.html" style="width:1200px; height:800px;"></iframe>
+<div id="output"></div>
+<script>
+  const f = document.getElementById('testFrame');
+  f.onload = function() {
+    setTimeout(() => {
+      const doc = f.contentDocument || f.contentWindow.document;
+      const win = f.contentWindow;
+      
+      // Open deck builder
+      win.openDeckBuilderFromMenu();
+      
+      const deckModal = doc.getElementById('deckModal');
+      const deckGrid = doc.getElementById('deckGrid');
+      const cards = deckGrid ? deckGrid.querySelectorAll('.deck-card-tile') : [];
+      const deckModalbox = doc.querySelector('.deck-modalbox');
+      const workspace = doc.querySelector('.deck-builder-workspace');
+      const libPane = doc.querySelector('.deck-library-pane');
+
+      const modalStyle = win.getComputedStyle(deckModal);
+      const gridStyle = deckGrid ? win.getComputedStyle(deckGrid) : {};
+      const libStyle = libPane ? win.getComputedStyle(libPane) : {};
+      const wsStyle = workspace ? win.getComputedStyle(workspace) : {};
+      const firstCardStyle = cards[0] ? win.getComputedStyle(cards[0]) : {};
+
+      const info = {
+        deckModalOpen: deckModal.classList.contains('open'),
+        deckModalDisplay: modalStyle.display,
+        cardsRenderedCount: cards.length,
+        gridOffsetWidth: deckGrid ? deckGrid.offsetWidth : 0,
+        gridOffsetHeight: deckGrid ? deckGrid.offsetHeight : 0,
+        gridClientHeight: deckGrid ? deckGrid.clientHeight : 0,
+        gridScrollHeight: deckGrid ? deckGrid.scrollHeight : 0,
+        gridDisplay: gridStyle.display,
+        libPaneHeight: libPane ? libPane.offsetHeight : 0,
+        wsHeight: workspace ? workspace.offsetHeight : 0,
+        firstCardDisplay: firstCardStyle.display,
+        firstCardVisibility: firstCardStyle.visibility,
+        firstCardOpacity: firstCardStyle.opacity,
+        firstCardWidth: cards[0] ? cards[0].offsetWidth : 0,
+        firstCardHeight: cards[0] ? cards[0].offsetHeight : 0,
+        firstCardText: cards[0] ? cards[0].innerText.slice(0, 50) : 'none'
+      };
+
+      document.getElementById('output').innerText = JSON.stringify(info, null, 2);
+    }, 500);
+  };
+</script>
+</body>
+</html>

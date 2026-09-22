@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Grand Legends TCG - Test de Viewports y Responsividad Multi-Dispositivo</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/duel-field.css">
+  <style>
+    body { font-family: monospace; background: #0c1017; color: #e1e7ec; padding: 20px; }
+    .pass { color: #10b981; }
+    .fail { color: #f43f5e; font-weight: bold; }
+    .vp-section { margin: 16px 0; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; background: #111827; }
+    .vp-title { font-size: 1.1em; color: #f59e0b; font-weight: bold; margin-bottom: 8px; }
+    .summary { margin-top: 25px; font-size: 1.25em; border-top: 2px solid #334155; padding-top: 15px; }
+    .sandbox-container {
+      position: relative;
+      overflow: hidden;
+      margin: 8px 0;
+      box-sizing: border-box;
+      background: #070b14;
+    }
+  </style>
+</head>
+<body>
+  <h1>Grand Legends TCG — Suite de Validación Responsive Multi-Dispositivo (v6.8.10)</h1>
+  <div id="test-results"></div>
+  <div id="test-summary" class="summary"></div>
+  <div id="sandbox-root" style="position: absolute; left: -9999px; top: 0; width: 2500px;"></div>
+
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+
+  <script>
+    const results = document.getElementById('test-results');
+    const summary = document.getElementById('test-summary');
+    const sandboxRoot = document.getElementById('sandbox-root');
+    let totalTests = 0;
+    let passedTests = 0;
+
+    function assert(condition, message, groupEl) {
+      totalTests++;
+      const div = document.createElement('div');
+      if (condition) {
+        passedTests++;
+        div.className = 'pass';
+        div.textContent = `  [PASS] ${message}`;
+      } else {
+        div.className = 'fail';
+        div.textContent = `  [FAIL] ${message}`;
+      }
+      (groupEl || results).appendChild(div);
+    }
+
+    const testResolutions = [
+      { id: 'mob-compact', name: '1. Móvil Vertical Compacto (360x640 - Android)', width: 360, height: 640 },
+      { id: 'mob-iphone',  name: '2. Móvil Vertical Estándar (390x844 - iPhone 12/13/14)', width: 390, height: 844 },
+      { id: 'mob-land',    name: '3. Móvil Horizontal / Landscape (844x390 - Landscape)', width: 844, height: 390 },
+      { id: 'tab-port',    name: '4. Tablet Vertical (768x1024 - iPad)', width: 768, height: 1024 },
+      { id: 'laptop-hd',   name: '5. Laptop HD (1280x720)', width: 1280, height: 720 },
+      { id: 'desktop-fhd', name: '6. Desktop Full HD (1920x1080)', width: 1920, height: 1080 }
+    ];
+
+    testResolutions.forEach(res => {
+      const section = document.createElement('div');
+      section.className = 'vp-section';
+      const title = document.createElement('div');
+      title.className = 'vp-title';
+      title.textContent = `📐 Viewport: ${res.name}`;
+      section.appendChild(title);
+      results.appendChild(section);
+
+      // 1. Validar Header
+      const headerSandbox = document.createElement('div');
+      headerSandbox.className = 'sandbox-container';
+      headerSandbox.style.width = res.width + 'px';
+      headerSandbox.innerHTML = `
+        <header id="gameHeader" style="position:relative; width:100%;">
+          <div class="header-inner">
+            <div class="brand-badge">
+              <span class="brand-logo-icon">🏴‍☠️</span>
+              <div>
+                <h1 class="header-title">GRAND LEGENDS TCG</h1>
+                <div class="header-sub">BATALLA TÁCTICA</div>
+              </div>
+            </div>
+            <div class="header-controls">
+              <button type="button" class="btn-head-action">ℹ️ Guía</button>
+              <button type="button" class="btn-head-action">🛠️ Mazo</button>
+            </div>
+          </div>
+        </header>
+      `;
+      sandboxRoot.appendChild(headerSandbox);
+      const headerEl = headerSandbox.querySelector('#gameHeader');
+      assert(headerEl && headerEl.scrollWidth <= res.width + 4,
+        `Barra superior (#gameHeader) encuadra sin desborde (${headerEl ? headerEl.scrollWidth : 0}px <= ${res.width}px)`, section);
+
+      // 2. Validar Menú Principal (Lobby Legendario)
+      const menuSandbox = document.createElement('div');
+      menuSandbox.className = 'sandbox-container';
+      menuSandbox.style.width = res.width + 'px';
+      menuSandbox.style.height = res.height + 'px';
+      menuSandbox.innerHTML = `
+        <div class="modal open" style="position:relative; inset:auto; display:flex; width:100%; height:100%;">
+          <div class="modalbox menu-modalbox" style="margin:0 auto;">
+            <div class="user-status-strip">
+              <div class="player-profile-badge">
+                <span class="player-username">Jugador</span>
+                <span class="player-rank-pill">Novato</span>
+              </div>
+              <div class="stats-pills-row">
+                <div class="stat-glass-pill pill-gold"><span class="pill-title">COLECCIÓN</span></div>
+                <div class="stat-glass-pill pill-cyan"><span class="pill-title">SOBRES</span></div>
+              </div>
+            </div>
+
+            <div class="menu-hero-showcase">
+              <div class="main-menu-hero">
+                <h1 class="main-menu-title shimmer-logo">GRAND LEGENDS <span class="logo-gold">TCG</span></h1>
+                <p class="main-menu-subtitle">El Duelo Táctico Definitivo</p>
+              </div>
+              <div class="menu-leader-widget">
+                <div class="leader-widget-top">
+                  <span class="leader-widget-label">👑 TU COMANDANTE</span>
+                  <span class="deck-status-pill ready">⚡ Mazo Listo (40/40)</span>
+                </div>
+                <div class="leader-widget-body">
+                  <div class="leader-widget-art">👒</div>
+                  <div class="leader-widget-details">
+                    <h4 class="leader-widget-name">Monkey D. Luffy</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="menu-battle-strip menu-primary-cta">
+              <button type="button" class="btn-hero-play">¡ENTRAR EN BATALLA!</button>
+              <button type="button" class="btn-tournament-quick">MODO TORNEO</button>
+            </div>
+
+            <div class="menu-modules-grid">
+              <div class="menu-card theme-sapphire"><h3>Constructor de Mazos</h3></div>
+              <div class="menu-card theme-gold"><h3>Abrir Sobres</h3></div>
+              <div class="menu-card theme-emerald"><h3>Colección de Sets</h3></div>
+              <div class="menu-card theme-amethyst"><h3>Guía Táctica</h3></div>
+            </div>
+
+            <div class="quests-board">
+              <div class="quests-board-header"><span>📜 TABLÓN DE MISIONES</span></div>
+              <div class="quests-grid">
+                <div class="quest-card"><strong class="quest-title">Bautismo de Combate</strong></div>
+                <div class="quest-card"><strong class="quest-title">Maestro Forjador</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      sandboxRoot.appendChild(menuSandbox);
+      const menuBox = menuSandbox.querySelector('.menu-modalbox');
+      assert(menuBox && menuBox.scrollWidth <= res.width + 4,
+        `Menú Principal (.menu-modalbox) encuadra en la pantalla (${menuBox ? menuBox.scrollWidth : 0}px <= ${res.width}px)`, section);
+
+      const questsBoard = menuSandbox.querySelector('.quests-board');
+      assert(questsBoard !== null && questsBoard.offsetHeight > 0,
+        `Tablón de misiones accesible y sin recorte vertical (${questsBoard ? questsBoard.offsetHeight : 0}px de altura)`, section);
+
+      // En resoluciones con altura menor a 950px, menuBox permite scroll vertical
+      if (res.height < 950) {
+        assert(menuBox.scrollHeight >= menuBox.clientHeight,
+          `Menú Principal tiene scroll vertical activo para pantallas compactas (${menuBox.scrollHeight}px >= ${menuBox.clientHeight}px)`, section);
+      } else {
+        assert(menuBox.scrollHeight > 0,
+          `Menú Principal renderiza todo su contenido (${menuBox.scrollHeight}px)`, section);
+      }
+
+      // 3. Validar Catálogo de Sets
+      const setsSandbox = document.createElement('div');
+      setsSandbox.className = 'sandbox-container';
+      setsSandbox.style.width = res.width + 'px';
+      setsSandbox.innerHTML = `
+        <div class="modal open" style="position:relative; inset:auto; display:flex; width:100%;">
+          <div class="modalbox sets-modalbox" style="margin:0 auto;">
+            <div class="modal-nav-bar">
+              <button type="button" class="btn-nav-back">⬅️ Volver</button>
+              <button type="button" class="modal-close-icon">✕</button>
+            </div>
+            <div class="set-filter-tabs">
+              <button type="button" class="filter-tab active">Todas las Expansiones</button>
+              <button type="button" class="filter-tab">SET 01 · Origins</button>
+              <button type="button" class="filter-tab">SET 02 · Awakening</button>
+              <button type="button" class="filter-tab">SET 03 · Shadows</button>
+              <button type="button" class="filter-tab">SET 04 · Collision</button>
+            </div>
+            <div class="sets-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+              <div class="card" style="height:160px;">Carta 1</div>
+              <div class="card" style="height:160px;">Carta 2</div>
+            </div>
+          </div>
+        </div>
+      `;
+      sandboxRoot.appendChild(setsSandbox);
+      const setsBox = setsSandbox.querySelector('.sets-modalbox');
+      assert(setsBox && setsBox.scrollWidth <= res.width + 4,
+        `Catálogo de Sets (.sets-modalbox) encuadra sin desborde (${setsBox ? setsBox.scrollWidth : 0}px <= ${res.width}px)`, section);
+
+      const setTabs = setsSandbox.querySelector('.set-filter-tabs');
+      assert(setTabs !== null && setTabs.offsetWidth <= res.width,
+        `Barra de pestañas (.set-filter-tabs) soporta swipe táctil sin forzar overflow`, section);
+
+      // 4. Validar Campo de Batalla y Arena
+      const arenaSandbox = document.createElement('div');
+      arenaSandbox.className = 'sandbox-container';
+      arenaSandbox.style.width = res.width + 'px';
+      arenaSandbox.innerHTML = `
+        <div class="wrap" id="gameApp" style="width:100%;">
+          <div class="topbar">
+            <div class="panel p2">🤖 RIVAL</div>
+            <div class="panel p1">🧑 TÚ</div>
+          </div>
+          <div class="battle-layout" style="display:block;">
+            <div class="arena-view-container">
+              <div class="battle-arena mode-2d" id="battleArena">
+                <div class="arena-half enemy-half">
+                  <div class="arena-row enemy-row">
+                    <div class="arena-side"><div class="arena-stat">❤️ 5</div></div>
+                    <div class="arena-leader enemy">👑 Rival</div>
+                  </div>
+                  <div class="field-zone-container enemy-zone">
+                    <div class="arena-field">
+                      <div class="arena-unit enemy">Unidad Rival</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="arena-divider"></div>
+                <div class="arena-half player-half">
+                  <div class="field-zone-container player-zone">
+                    <div class="arena-field">
+                      <div class="arena-unit">Tu Unidad</div>
+                    </div>
+                  </div>
+                  <div class="arena-row player-row">
+                    <div class="arena-side"><div class="arena-stat">❤️ 5</div></div>
+                    <div class="arena-leader">👑 Tu Líder</div>
+                  </div>
+                  <div class="action-bar">
+                    <button type="button" class="btn-battle-action btn-end-turn">Terminar Turno</button>
+                    <button type="button" class="btn-battle-action">Ver Mazo</button>
+                  </div>
+                  <div class="hand" id="arenaHand">
+                    <div class="card">Mano 1</div>
+                    <div class="card">Mano 2</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      sandboxRoot.appendChild(arenaSandbox);
+      const appEl = arenaSandbox.querySelector('#gameApp');
+      assert(appEl && appEl.scrollWidth <= res.width + 4,
+        `Tablero de batalla (#gameApp) no desborda la anchura (${appEl ? appEl.scrollWidth : 0}px <= ${res.width}px)`, section);
+
+      const arenaEl = arenaSandbox.querySelector('#battleArena');
+      assert(arenaEl && arenaEl.scrollWidth <= res.width + 4,
+        `Arena de duelo (#battleArena) adaptada al ancho disponible (${arenaEl ? arenaEl.scrollWidth : 0}px <= ${res.width}px)`, section);
+
+      const handEl = arenaSandbox.querySelector('#arenaHand');
+      assert(handEl !== null, `Bandeja de mano táctil (#arenaHand) inicializada`, section);
+    });
+
+    // Resumen Final
+    const isSuccess = passedTests === totalTests && totalTests >= 50;
+    if (isSuccess) {
+      summary.className = 'summary pass';
+      summary.innerHTML = `<strong>★ TODAS LAS PRUEBAS DE VIEWPORT Y RESPONSIVIDAD PASARON CON ÉXITO: ${passedTests}/${totalTests} ★</strong>`;
+    } else {
+      summary.className = 'summary fail';
+      summary.innerHTML = `<strong>❌ FALLO EN PRUEBAS DE VIEWPORT: ${passedTests}/${totalTests} aprobadas</strong>`;
+    }
+  </script>
+</body>
+</html>

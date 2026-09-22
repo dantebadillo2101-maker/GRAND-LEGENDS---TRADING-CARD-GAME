@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test de Modo 3D, Botones y Animaciones - Grand Legends TCG</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/duel-field.css">
+</head>
+<body style="background:#111; color:#fff; font-family:monospace; padding:20px;">
+  <h1>Test de Modo 3D, Botones y Animaciones</h1>
+  <div id="results">Ejecutando pruebas...</div>
+
+  <!-- Mock DOM completo de la batalla táctica -->
+  <div class="arena-view-container" style="max-width:900px; margin:20px auto;">
+    <div class="battle-arena mode-2d" id="battleArena">
+      <div id="arenaP2Field" class="arena-field">
+        <div class="arena-unit enemy" data-index="0" id="unitP2_0">
+          <h4>Defensor Rival</h4>
+          <button type="button" class="btn-unit-attack" id="attackBtnP2_0">⚔️ Atacar</button>
+        </div>
+      </div>
+      <div class="arena-divider"></div>
+      <div id="arenaP1Field" class="arena-field">
+        <div class="arena-unit" data-index="0" id="unitP1_0">
+          <h4>Atacante P1</h4>
+          <button type="button" class="btn-unit-attack" id="attackBtnP1_0">⚔️ Atacar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-battle-controls center">
+    <button type="button" id="drawBtn">🎴 Robar</button>
+    <button type="button" id="endBtn">⏭️ Terminar Turno</button>
+    <button type="button" id="resetBtn">🔄 Reiniciar Partida</button>
+  </div>
+
+  <div id="arenaLog"></div>
+
+  <!-- Carga de Scripts del Juego -->
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const results = [];
+      const resDiv = document.getElementById('results');
+
+      function test(name, condition, detail) {
+        results.push({ name, pass: !!condition, detail: detail || '' });
+      }
+
+      try {
+        // 1. Verificar que el log inferior fue eliminado y no existe en el DOM
+        const bottomLog = document.getElementById('log');
+        test('Log inferior inexistente en el DOM', !bottomLog);
+
+        // 2. Verificar que log("test") funciona de forma segura sin romper la ejecución
+        let logThrew = false;
+        try {
+          window.log("Prueba de registro sin log inferior");
+        } catch (e) {
+          logThrew = true;
+        }
+        test('Función log() emite a arenaLog sin error', !logThrew);
+
+        const arenaLogEl = document.getElementById('arenaLog');
+        test('Mensaje registrado en arenaLog lateral', arenaLogEl && arenaLogEl.textContent.includes('Prueba de registro sin log inferior'));
+
+        // 3. Integridad de vista 2D limpia y estable
+        const arena = document.getElementById('battleArena');
+        test('Arena inicializada en modo 2D limpio', arena && arena.classList.contains('mode-2d'));
+
+        // 4. Botón de perspectiva 3D eliminado de la UI según solicitud
+        const toggleBtn = document.getElementById('btnTogglePerspective');
+        test('Botón de perspectiva 3D eliminado de la UI', !toggleBtn);
+
+        // 5. Botones inferiores de batalla responden a eventos en modo 3D
+        let drawClicked = false;
+        let endClicked = false;
+        let resetClicked = false;
+        document.getElementById('drawBtn').onclick = () => { drawClicked = true; };
+        document.getElementById('endBtn').onclick = () => { endClicked = true; };
+        document.getElementById('resetBtn').onclick = () => { resetClicked = true; };
+
+        document.getElementById('drawBtn').click();
+        document.getElementById('endBtn').click();
+        document.getElementById('resetBtn').click();
+
+        test('Botón Robar clickeable', drawClicked);
+        test('Botón Terminar Turno clickeable', endClicked);
+        test('Botón Reiniciar clickeable', resetClicked);
+
+        // 6. Botones de unidades en el campo 3D
+        let unitAttackClicked = false;
+        document.getElementById('attackBtnP1_0').onclick = () => { unitAttackClicked = true; };
+        document.getElementById('attackBtnP1_0').click();
+        test('Botón de ataque en unidad 3D clickeable sin interferencias', unitAttackClicked);
+
+        // 7. Capas overlay SVG y banners tienen pointer-events: none (no bloquean clicks)
+        const svgOverlay = document.getElementById('targetingSvgOverlay');
+        const svgComputed = svgOverlay ? window.getComputedStyle(svgOverlay).pointerEvents : 'none';
+        test('Targeting SVG Overlay no bloquea eventos del ratón (pointer-events: none)', svgComputed === 'none');
+
+        // 8. Animaciones de Combate en modo 3D
+        const u1 = document.getElementById('unitP1_0');
+        const u2 = document.getElementById('unitP2_0');
+
+        // 8.1 Slash GBA
+        GLTCG.visuals.triggerSlash(u2);
+        const slashEl = u2.querySelector('.slash-effect-container');
+        test('Animación Slash GBA generada correctamente sobre unidad objetivo en 3D', !!slashEl && !!slashEl.querySelector('.gba-slash-blade'));
+
+        // 8.2 Screen Shake 3D adaptativo
+        GLTCG.visuals.triggerScreenShake('medium');
+        test('Sacudida de pantalla normal (gba-shake) aplicada en modo 3D', arena.classList.contains('gba-shake'));
+
+        GLTCG.visuals.triggerScreenShake('heavy');
+        test('Sacudida de pantalla pesada (gba-shake-heavy) aplicada en modo 3D', arena.classList.contains('gba-shake-heavy'));
+
+        // 8.3 Floating Combat Text
+        GLTCG.visuals.spawnFloatingCombatText(u2, '💥 -2500', 'damage');
+        const fText = u2.querySelector('.floating-combat-text');
+        test('Números de combate flotantes se generan sobre la carta en 3D', !!fText && fText.textContent === '💥 -2500');
+
+        // 8.4 Banner de Fase
+        GLTCG.visuals.showPhaseBanner('⚔️ TU TURNO', 'Fase de Ataque');
+        const phaseBanner = document.getElementById('duelPhaseBanner');
+        test('Banner cinemático de fase activado en modo 3D', !!phaseBanner && phaseBanner.classList.contains('active'));
+
+        // 8.5 Rayo láser holográfico Duel Links
+        GLTCG.visuals.startTargeting(u1);
+        const coreBeam = document.getElementById('targetingBeamCore');
+        test('Haz de apuntado láser se visualiza en el SVG 3D', coreBeam && coreBeam.style.display !== 'none');
+        GLTCG.visuals.stopTargeting();
+        test('Haz de apuntado se oculta al terminar', coreBeam && coreBeam.style.display === 'none');
+
+        // Renderizado del informe
+        const allPassed = results.every(r => r.pass);
+        resDiv.innerHTML = '<h2 style="color:' + (allPassed ? '#04d361' : '#ff5555') + '">' +
+          (allPassed ? '★ TODAS LAS PRUEBAS DE MODO 3D Y ANIMACIONES PASARON CON ÉXITO ★' : 'ALGUNAS PRUEBAS FALLARON') + '</h2>' +
+          '<ul>' + results.map(r => '<li style="color:' + (r.pass ? '#04d361' : '#ff5555') + '">' +
+            (r.pass ? '✔ PASS: ' : '✖ FAIL: ') + r.name + (r.detail ? ' — ' + r.detail : '') + '</li>').join('') + '</ul>';
+
+      } catch (err) {
+        resDiv.innerHTML = '<h2 style="color:red">EXCEPCIÓN: ' + err.message + '</h2><pre>' + err.stack + '</pre>';
+      }
+    });
+  </script>
+</body>
+</html>

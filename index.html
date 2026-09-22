@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<title>Grand Legends TCG — Web Oficial</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/duel-field.css?v=6.8.4">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.btn-leader-canto{margin-top:8px;border:1px solid #d9a7ff;background:linear-gradient(135deg,#4a185f,#17132b);color:#fff;padding:7px 10px;border-radius:9px;cursor:pointer;font-weight:700;box-shadow:0 0 12px #8c4cff44}.btn-leader-canto:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}.btn-leader-canto:disabled{opacity:.45;cursor:not-allowed}
+
+/* TORNEO VS IA */
+.tournament-modalbox{max-width:760px}
+.tournament-difficulty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.tournament-difficulty{border:2px solid #50617d;border-radius:15px;background:#101a2d;color:#fff;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:7px;transition:.2s}
+.tournament-difficulty:hover,.tournament-difficulty.selected{border-color:#ffd65d;transform:translateY(-2px);box-shadow:0 8px 20px #0005}
+.tournament-difficulty span{font-size:.8rem;opacity:.75}
+.tournament-bracket{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0;max-height:360px;overflow:auto}
+.tournament-progress{grid-column:1/-1;border:2px solid #d8a63f;border-radius:14px;padding:12px;background:#20190d;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tournament-opponent{border:1px solid #334766;border-radius:12px;background:#0d1627;padding:10px;text-align:left;display:flex;align-items:center;gap:8px}
+.tournament-opponent.current{border-color:#ffd65d;box-shadow:0 0 15px #ffd65d33}
+.tournament-opponent small{display:block;opacity:.7;margin-left:auto;text-align:right}
+.tournament-champion{grid-column:1/-1;border:2px solid #ffd65d;border-radius:18px;padding:30px;background:radial-gradient(circle,#35280d,#101725);display:flex;flex-direction:column;gap:10px;font-size:1.15rem}
+.tournament-champion strong{font-size:1.7rem;color:#ffd65d}
+.tournament-modal-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+@media(max-width:700px){.tournament-difficulty-grid,.tournament-bracket{grid-template-columns:1fr}.tournament-progress{display:block}.tournament-opponent small{margin-left:0}}
+
+</style>
+</head>
+<body>
+
+<!-- ==========================================
+     PANTALLA INFORMATIVA PRE-BATALLA & CENTRO DE JUGADOR (ORGANIZADA POR PESTAÑAS)
+     ========================================== -->
+<div id="playerHubModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="playerHubTitle">
+  <div class="modalbox hub-modalbox">
+    <!-- Barra de Navegación del Modal -->
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" onclick="closePlayerHub()">⬅️ Volver</button>
+      <div id="playerHubTitle" class="hub-modal-title">⚔️ INFORMACIÓN &amp; CENTRO DEL JUGADOR</div>
+      <button type="button" class="modal-close-icon" onclick="closePlayerHub()">✕</button>
+    </div>
+
+    <!-- PESTAÑAS PRINCIPALES (NO INVASIVAS) -->
+    <div class="hub-nav-tabs">
+      <button type="button" id="hubTabBtnProfile" class="hub-tab-btn active" onclick="switchHubTab('profile')">
+        <span class="tab-icon">👤</span> Mi Perfil
+      </button>
+      <button type="button" id="hubTabBtnAccount" class="hub-tab-btn" onclick="switchHubTab('account')">
+        <span class="tab-icon">🔐</span> Cuenta &amp; Acceso
+      </button>
+      <button type="button" id="hubTabBtnOnline" class="hub-tab-btn" onclick="switchHubTab('online')">
+        <span class="tab-icon">🌐</span> Modo Online
+      </button>
+      <button type="button" id="hubTabBtnTactics" class="hub-tab-btn" onclick="switchHubTab('tactics')">
+        <span class="tab-icon">⚔️</span> Guía Pre-Batalla
+      </button>
+    </div>
+
+    <!-- PESTAÑA 1: PERFIL DEL JUGADOR -->
+    <div id="hubPanelProfile" class="hub-panel active">
+      <div class="hub-panel-header">
+        <div class="hub-avatar-badge">👤</div>
+        <div>
+          <h2 id="hubProfileUsername">Jugador</h2>
+          <p class="subtitle-text" style="margin-bottom:0">Progreso local y sincronización de estadísticas</p>
+        </div>
+      </div>
+
+      <div id="hubProfileStats" class="hub-profile-grid">
+        <div class="hub-stat-card">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="hubStatWins">0</div>
+          <div class="stat-label">Victorias</div>
+        </div>
+        <div class="hub-stat-card">
+          <div class="stat-icon">💀</div>
+          <div class="stat-value" id="hubStatLosses">0</div>
+          <div class="stat-label">Derrotas</div>
+        </div>
+        <div class="hub-stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="hubStatLevel">1</div>
+          <div class="stat-label">Nivel Actual</div>
+        </div>
+        <div class="hub-stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value" id="hubStatCollection">0</div>
+          <div class="stat-label">Cartas en Mazo/Colección</div>
+        </div>
+        <div class="hub-stat-card">
+          <div class="stat-icon">🎁</div>
+          <div class="stat-value" id="hubStatPacks">10</div>
+          <div class="stat-label">Sobres Listos</div>
+        </div>
+      </div>
+
+      <div class="hub-actions-row">
+        <button type="button" class="btn-primary-action" onclick="saveHubProfile()">💾 Guardar Progreso</button>
+        <button type="button" id="hubLogoutBtn" class="btn-danger" onclick="logoutAccount()">🚪 Cerrar Sesión</button>
+        <button type="button" class="btn-secondary-action" onclick="switchHubTab('account')">🔄 Cambiar / Crear Cuenta</button>
+      </div>
+      <div id="hubProfileMsg" class="account-msg"></div>
+    </div>
+
+    <!-- PESTAÑA 2: INICIAR SESIÓN / CREAR CUENTA -->
+    <div id="hubPanelAccount" class="hub-panel" style="display:none">
+      <div class="account-subtabs">
+        <button id="hubLoginSubTab" class="active" type="button" onclick="showHubAccountMode('login')">🔐 Iniciar Sesión</button>
+        <button id="hubRegisterSubTab" type="button" onclick="showHubAccountMode('register')">📝 Crear Nueva Cuenta</button>
+      </div>
+
+      <div id="hubLoginBox">
+        <h3>🔐 Iniciar Sesión</h3>
+        <p class="subtitle-text">Accede con tu usuario para recuperar tus mazos, cartas desbloqueadas y estadísticas.</p>
+        <div class="form-group">
+          <label for="hubLoginUser">Nombre de Usuario</label>
+          <input id="hubLoginUser" placeholder="Ej: PirataRey" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label for="hubLoginPass">Contraseña</label>
+          <input id="hubLoginPass" type="password" placeholder="Tu contraseña secreta" maxlength="40">
+        </div>
+        <button type="button" class="btn-primary-action" onclick="submitHubLogin()">Entrar al Juego</button>
+      </div>
+
+      <div id="hubRegisterBox" style="display:none">
+        <h3>📝 Crear Nueva Cuenta</h3>
+        <p class="subtitle-text">¡Regístrate gratis y recibe <b>10 Sobres Booster de bienvenida</b> para armar tu mazo!</p>
+        <div class="form-group">
+          <label for="hubRegisterUser">Nombre de Usuario</label>
+          <input id="hubRegisterUser" placeholder="Ej: PirataRey" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label for="hubRegisterPass">Contraseña</label>
+          <input id="hubRegisterPass" type="password" placeholder="Mínimo 4 caracteres" maxlength="40">
+        </div>
+        <div class="form-group">
+          <label for="hubRegisterPass2">Repetir Contraseña</label>
+          <input id="hubRegisterPass2" type="password" placeholder="Repite la contraseña" maxlength="40">
+        </div>
+        <button type="button" class="btn-primary-action" onclick="submitHubRegister()">Crear Cuenta &amp; Recibir 10 Sobres</button>
+      </div>
+
+      <div id="hubAccountMsg" class="account-msg"></div>
+    </div>
+
+    <!-- PESTAÑA 3: JUGAR ONLINE / MULTIJUGADOR -->
+    <div id="hubPanelOnline" class="hub-panel" style="display:none">
+      <div class="hub-panel-header">
+        <div class="hub-avatar-badge">🌐</div>
+        <div>
+          <h2>Multijugador Online en Red</h2>
+          <p class="subtitle-text" style="margin-bottom:0">Conéctate a una sala compartida para jugar partidas contra otros jugadores.</p>
+        </div>
+      </div>
+
+      <div class="online-server-config">
+        <label for="hubServerUrl">🖥️ Dirección del Servidor de Juego:</label>
+        <div class="online-row">
+          <input id="hubServerUrl" placeholder="http://localhost:3000" value="http://localhost:3000">
+          <button type="button" onclick="saveHubServerUrl()">💾 Guardar</button>
+        </div>
+        <small style="color:#94A3B8;">Para jugar con un amigo en tu misma red Wi-Fi, ingresa la IP del host (ej: <b>http://192.168.1.50:3000</b>).</small>
+      </div>
+
+      <div class="online-options-grid">
+        <div class="online-option-card">
+          <h3>➕ Crear Sala de Partida</h3>
+          <p>Genera un código de 6 caracteres para invitar a tu rival.</p>
+          <button type="button" class="btn-primary-action" onclick="createHubRoom()">➕ Generar Sala</button>
+        </div>
+        <div class="online-option-card">
+          <h3>🔗 Unirse a Sala Existente</h3>
+          <p>Ingresa el código que te compartió tu rival para entrar.</p>
+          <div class="online-row" style="margin-top:8px">
+            <input id="hubJoinCode" maxlength="6" placeholder="Ej: A7K2P9" style="text-transform:uppercase">
+            <button type="button" onclick="joinHubRoom()">Unirse</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="hubOnlineRoomDisplay" style="display:none; margin-top:14px;" class="center">
+        <h3>🔑 Código de tu Sala</h3>
+        <div id="hubRoomCode" class="online-code">------</div>
+        <div id="hubRoomStatus" class="online-status">🟡 Esperando al segundo jugador...</div>
+        <div class="row" style="justify-content:center; gap:8px;">
+          <button type="button" onclick="copyHubRoomCode()">📋 Copiar Código</button>
+          <button id="hubOnlineStartBtn" type="button" class="btn-primary-action" onclick="startHubOnlineMatch()" disabled>⚔️ Iniciar Batalla</button>
+        </div>
+      </div>
+
+      <div id="hubOnlineMsg" class="account-msg"></div>
+    </div>
+
+    <!-- PESTAÑA 4: GUÍA TÁCTICA PRE-BATALLA -->
+    <div id="hubPanelTactics" class="hub-panel" style="display:none">
+      <div class="hub-panel-header">
+        <div class="hub-avatar-badge">⚔️</div>
+        <div>
+          <h2>Reglas Oficiales y Tácticas de Batalla</h2>
+          <p class="subtitle-text" style="margin-bottom:0">Reglas justas de combate, guardia de campo y turnos de ataque.</p>
+        </div>
+      </div>
+
+      <div class="hub-tactics-grid">
+        <div class="hub-tactic-card">
+          <div class="tactic-header">🛡️ Guardia de Campo (Anti-Ataques Directos)</div>
+          <p><b>Regla Principal:</b> Si el oponente tiene personajes en su campo, <b>NO puedes atacar directamente a su Líder ni a sus Escudos</b>. Debes derrotar primero a los personajes defensores para abrir camino.</p>
+        </div>
+
+        <div class="hub-tactic-card">
+          <div class="tactic-header">⏳ Turno de Invocación (Summoning Sickness)</div>
+          <p>Las cartas recién jugadas entran en estado de preparación y <b>no pueden atacar en el mismo turno en que son invocadas</b>. Podrán atacar a partir de tu siguiente turno.</p>
+        </div>
+
+        <div class="hub-tactic-card">
+          <div class="tactic-header">⚔️ Límite de 1 Ataque por Turno</div>
+          <p>Para evitar cadenas infinitas, <b>cada personaje puede realizar como máximo 1 ataque por turno</b>. Tras atacar, quedará en estado 💤 <i>Agotado</i> hasta el inicio de tu siguiente turno.</p>
+        </div>
+
+        <div class="hub-tactic-card">
+          <div class="tactic-header">🪙 Cartas DON!! (+1000 ATK) y Combos</div>
+          <p>Generas 2 DON!! por turno (máx 10). Arrástralos hacia tus personajes para otorgarles <b>+1000 de Poder</b> temporal. Encadena ataques para subir tu multiplicador Combo.</p>
+        </div>
+      </div>
+
+      <div class="center" style="margin-top:18px;">
+        <button type="button" class="btn-hero-play" style="max-width:380px; margin:auto;" onclick="closePlayerHub();openLocalMode()">
+          <span class="play-icon">⚔️</span>
+          <div class="play-text">
+            <span class="play-title">¡ENTRAR A LA BATALLA!</span>
+            <span class="play-sub">Elegir modo de combate local o IA</span>
+          </div>
+          <span class="play-arrow">➔</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="jsError" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#4b1010;border:2px solid #ff6b6b;border-radius:12px;padding:12px;color:#fff;font-weight:bold"></div>
+
+<!-- ==========================================
+     HEADER DE LA PARTIDA ACTIVA
+     ========================================== -->
+<header id="gameHeader">
+  <div class="header-inner">
+    <div class="brand-badge">
+      <span class="brand-logo-icon">🏴‍☠️</span>
+      <div>
+        <h1 class="header-title">GRAND LEGENDS TCG</h1>
+        <div class="header-sub">BATALLA TÁCTICA · LÍDERES · DON!! · ESCUDOS · BLOCKER</div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button type="button" class="btn-head-action" onclick="openPlayerHub('tactics')" title="Ver guía táctica y perfil">ℹ️ Guía &amp; Perfil</button>
+      <button type="button" class="btn-head-action" onclick="openDeckBuilder()" title="Revisar mazo">🛠️ Mazo</button>
+      <button type="button" class="btn-head-action" onclick="confirmExitToMenu()" title="Volver al menú principal">🏠 Menú Principal</button>
+    </div>
+  </div>
+</header>
+
+<!-- ==========================================
+     MENÚ PRINCIPAL REDISEÑADO (LOBBY LEGENDARIO v6.8.9)
+     ========================================== -->
+<div class="modal open" id="mainMenu" role="dialog" aria-modal="true" aria-labelledby="mainMenuTitle">
+  <div class="modalbox menu-modalbox">
+    
+    <!-- Partículas ambientales flotantes de Maná / DON!! -->
+    <div class="ambient-particles" aria-hidden="true">
+      <span class="particle p1"></span>
+      <span class="particle p2"></span>
+      <span class="particle p3"></span>
+      <span class="particle p4"></span>
+      <span class="particle p5"></span>
+      <span class="particle p6"></span>
+    </div>
+
+    <!-- 1. BARRA SUPERIOR DE ESTADO DEL JUGADOR (GAMER HUB) -->
+    <div class="user-status-strip">
+      <div class="player-profile-badge" onclick="openPlayerHub('profile')" title="Ver y editar tu perfil de duelista">
+        <div class="player-avatar-ring">
+          <span class="player-avatar-icon">👤</span>
+          <span class="rank-gem-sparkle">✦</span>
+        </div>
+        <div class="player-meta-box">
+          <div class="player-name-row">
+            <span id="menuUserName" class="player-username">Jugador</span>
+            <span id="menuUserRankBadge" class="player-rank-pill">Novato</span>
+          </div>
+          <div class="player-level-row">
+            <span class="player-level-text">Nivel <b id="menuUserLevel">1</b></span>
+            <div class="menu-xp-track" title="Progreso de experiencia hacia el siguiente nivel">
+              <div id="menuUserXpBar" class="menu-xp-fill" style="width: 25%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-pills-row">
+        <div class="stat-glass-pill pill-gold" onclick="openSets()" title="Cartas descubiertas en tu colección">
+          <span class="pill-icon">📦</span>
+          <div class="pill-data">
+            <span class="pill-title">COLECCIÓN</span>
+            <span class="pill-value"><b id="collectionCount">0</b><small>/275</small></span>
+          </div>
+        </div>
+        <div class="stat-glass-pill pill-cyan" onclick="openPack()" title="Sobres booster disponibles para abrir">
+          <span class="pill-icon">🎁</span>
+          <div class="pill-data">
+            <span class="pill-title">SOBRES</span>
+            <span class="pill-value"><b id="packCount">0</b><span id="packReadyBadge" class="pill-pulse-dot"></span></span>
+          </div>
+        </div>
+        <button type="button" class="btn-hub-quick" onclick="openPlayerHub('profile')" title="Abrir Centro del Jugador">
+          <span>⚙️ Perfil</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. ENCABEZADO HERO CON DESTELLOS & WIDGET DE LÍDER ACTIVO -->
+    <div class="menu-hero-showcase">
+      <!-- Columna Izquierda: Logo Épico y Expansiones -->
+      <div class="main-menu-hero">
+        <div class="hero-emblem-wrap">
+          <span class="emblem-sword left">⚔️</span>
+          <div class="menu-hero-icon">🏴‍☠️</div>
+          <span class="emblem-sword right">⚔️</span>
+        </div>
+        <h1 id="mainMenuTitle" class="main-menu-title shimmer-logo">
+          GRAND LEGENDS <span class="logo-gold">TCG</span>
+        </h1>
+        <p class="main-menu-subtitle">El Duelo Táctico Definitivo · 7 Expansiones Oficiales · Estrategia 1v1</p>
+        <div class="set-mini-tag">
+          <span>📚 Colecciones Activas:</span>
+          <b>ORIGINS</b> · <b>AWAKENING</b> · <b>SHADOWS</b> · <b>COLLISION</b> · <b>RABBIT HOLE</b> · <b>EVOLUTION</b> · <b>KOREANOS</b>
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Widget del Líder / Comandante Activo -->
+      <div id="menuLeaderWidget" class="menu-leader-widget">
+        <div class="leader-widget-top">
+          <span class="leader-widget-label">👑 TU COMANDANTE</span>
+          <span id="menuDeckStatusBadge" class="deck-status-pill ready">⚡ Mazo Listo (40/40)</span>
+        </div>
+        <div class="leader-widget-body">
+          <div id="menuLeaderArt" class="leader-widget-art">👒</div>
+          <div class="leader-widget-details">
+            <h4 id="menuLeaderName" class="leader-widget-name">Monkey D. Luffy</h4>
+            <div id="menuLeaderStats" class="leader-widget-stats">
+              <span class="stat-life">❤️ <b id="menuLeaderLife">5</b> Vida</span>
+              <span class="stat-power">💥 5000 Poder</span>
+            </div>
+            <p id="menuLeaderAbility" class="leader-widget-ability">Habilidad activa del líder...</p>
+          </div>
+        </div>
+        <button type="button" class="btn-quick-leader-picker" onclick="openDeckLeaderPicker()">
+          👑 Cambiar Líder ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. ACCIÓN PRINCIPAL DE COMBATE (AAA RADIANT CTA & ACCESO DIRECTO A TORNEO) -->
+    <div class="menu-battle-strip menu-primary-cta">
+      <button type="button" class="btn-hero-play radiant-glow" onclick="openLocalMode()">
+        <span class="play-icon">⚔️</span>
+        <div class="play-text">
+          <span class="play-title">¡ENTRAR EN BATALLA!</span>
+          <span class="play-sub">Duelo táctico 1v1 · Juega contra la IA adaptativa o 2 Jugadores Local</span>
+        </div>
+        <span class="play-arrow">➔</span>
+      </button>
+
+      <button type="button" class="btn-tournament-quick" onclick="openLocalMode(); if(typeof startTournamentMode === 'function') startTournamentMode();" title="Entrar directo al Torneo de Campeones VS IA">
+        <span class="tourney-icon">🏆</span>
+        <div class="tourney-text">
+          <span class="tourney-title">MODO TORNEO</span>
+          <span class="tourney-sub">Eliminatoria Épica</span>
+        </div>
+        <span class="tourney-arrow">➔</span>
+      </button>
+    </div>
+
+    <!-- 4. GRID DE MÓDULOS DEL JUEGO (GLASSMORPHISM TEMÁTICO ELEMENTAL) -->
+    <div class="menu-modules-grid">
+      <!-- Constructor de Mazos (Zafiro Arcano) -->
+      <div class="menu-card theme-sapphire" onclick="openDeckBuilderFromMenu()">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">🛠️</div>
+          <span id="menuModDeckBadge" class="card-badge badge-sapphire">40/40 Válido</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Constructor de Mazos</h3>
+          <p>Diseña tu baraja estratégica, balancea la curva de costes DON!! y prueba combinaciones.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta">Diseñar Mazo ➔</span>
+        </div>
+      </div>
+
+      <!-- Sobres (Oro Legendario) -->
+      <div class="menu-card theme-gold" onclick="openPack()">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">🎁</div>
+          <span id="menuModPackBadge" class="card-badge badge-gold">Sobres Listos</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Apertura de Sobres</h3>
+          <p>Abre boosters de las 7 expansiones oficiales y desbloquea cartas Ultra Raras y Secretas.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta">Abrir Sobres ➔</span>
+        </div>
+      </div>
+
+      <!-- Sets (Esmeralda de Compendio) -->
+      <div class="menu-card theme-emerald" onclick="openSets()">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">📚</div>
+          <span class="card-badge badge-emerald">7 Sets · 275 Cartas</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Catálogo de Sets</h3>
+          <p>Explora todas las cartas con su ilustración oficial, costes, rarezas y habilidades completas.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta">Explorar Cartas ➔</span>
+        </div>
+      </div>
+
+      <!-- Guía y Tácticas (Amatista Celestial) -->
+      <div class="menu-card theme-amethyst" onclick="openPlayerHub('tactics')">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">🎓</div>
+          <span class="card-badge badge-amethyst">Reglas &amp; DON!!</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Guía &amp; Tácticas</h3>
+          <p>Consulta las reglas oficiales: Guardia de campo, asignación de DON!!, Blocker y ataques clave.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta">Ver Tácticas ➔</span>
+        </div>
+      </div>
+
+      <!-- Cuenta & Perfil (Rubí Platino) -->
+      <div class="menu-card theme-ruby" onclick="openPlayerHub('account')">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">👤</div>
+          <span id="menuModWinsBadge" class="card-badge badge-ruby">0 Victorias</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Cuenta &amp; Perfil</h3>
+          <p>Inicia sesión, guarda tus estadísticas, récord de victorias y gestiona tu progreso en la nube.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta">Ver Perfil ➔</span>
+        </div>
+      </div>
+
+      <!-- Modo Online (Pizarra / Próximamente) -->
+      <div class="menu-card theme-slate" onclick="openPlayerHub('online')">
+        <div class="card-glow-edge"></div>
+        <div class="menu-card-header">
+          <div class="menu-card-icon">🌐</div>
+          <span class="card-badge badge-slate">🔒 En Desarrollo</span>
+        </div>
+        <div class="menu-card-body">
+          <h3>Modo Online</h3>
+          <p>Salas multijugador P2P en tiempo real con código de invitación para retar a tus amigos.</p>
+        </div>
+        <div class="menu-card-footer">
+          <span class="menu-card-cta status-paused">Próximamente</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. TABLÓN DE MISIONES Y DESAFÍOS DEL AVENTURERO -->
+    <div class="quests-board">
+      <div class="quests-board-header">
+        <span class="quests-board-title">📜 TABLÓN DE MISIONES DEL AVENTURERO</span>
+        <span class="quests-board-sub">Completa tareas para obtener sobres y experiencia diaria</span>
+      </div>
+      <div class="quests-grid">
+        <div class="quest-card" id="questBattle">
+          <div class="quest-icon">⚔️</div>
+          <div class="quest-info">
+            <div class="quest-header-row">
+              <strong class="quest-title">Bautismo de Combate</strong>
+              <span class="quest-reward">+5 Sobres 🎁</span>
+            </div>
+            <p class="quest-desc">Disputa una partida en Batalla Local o contra la IA.</p>
+            <div class="quest-progress-track">
+              <div id="questBattleBar" class="quest-progress-fill" style="width:0%;"></div>
+            </div>
+            <span id="questBattleText" class="quest-progress-text">0 / 1 Partidas</span>
+          </div>
+        </div>
+
+        <div class="quest-card" id="questDeck">
+          <div class="quest-icon">🛠️</div>
+          <div class="quest-info">
+            <div class="quest-header-row">
+              <strong class="quest-title">Maestro Forjador</strong>
+              <span class="quest-reward">+3 Sobres 🎁</span>
+            </div>
+            <p class="quest-desc">Construye o carga una baraja reglamentaria de 40 cartas.</p>
+            <div class="quest-progress-track">
+              <div id="questDeckBar" class="quest-progress-fill" style="width:100%;"></div>
+            </div>
+            <span id="questDeckText" class="quest-progress-text">1 / 1 Completado ✔️</span>
+          </div>
+        </div>
+
+        <div class="quest-card" id="questCollection">
+          <div class="quest-icon">📦</div>
+          <div class="quest-info">
+            <div class="quest-header-row">
+              <strong class="quest-title">Coleccionista Legendario</strong>
+              <span class="quest-reward">+200 XP ⭐</span>
+            </div>
+            <p class="quest-desc">Descubre al menos 10 cartas diferentes de los 7 sets.</p>
+            <div class="quest-progress-track">
+              <div id="questColBar" class="quest-progress-fill" style="width:10%;"></div>
+            </div>
+            <span id="questColText" class="quest-progress-text">0 / 10 Cartas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE SELECCIÓN DE MODO LOCAL
+     ========================================== -->
+<div class="modal" id="localModeModal">
+  <div class="modalbox center">
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" onclick="closeLocalMode();openMainMenu()">⬅️ Volver al Menú</button>
+      <button type="button" class="modal-close-icon" onclick="closeLocalMode();openMainMenu()">✕</button>
+    </div>
+    
+    <h2>⚔️ ELIGE TU MODO DE JUEGO</h2>
+    <p class="subtitle-text">Selecciona cómo deseas disputar la partida en este dispositivo:</p>
+    
+    <div class="modes-selection-grid">
+      <!-- Opción 1: VS IA -->
+      <div class="mode-card" onclick="startLocalAI()">
+        <div class="mode-icon">🤖</div>
+        <h3>VS Inteligencia Artificial</h3>
+        <p>Enfréntate a la IA táctica de Grand Legends. Ideal para practicar y probar nuevos mazos.</p>
+        <label for="aiDifficulty">Dificultad de la IA</label>
+        <select id="aiDifficulty" onclick="event.stopPropagation()" onchange="setAIDifficulty(this.value)">
+          <option value="baja">Baja</option>
+          <option value="normal">Normal</option>
+          <option value="dificil">Difícil</option>
+        </select>
+        <button type="button" class="btn-select-mode">⚔️ Jugar contra la IA</button>
+      </div>
+
+      <!-- Opción 2: Torneo VS IA -->
+      <div class="mode-card tournament-mode-card" onclick="startTournamentMode()">
+        <div class="mode-icon">🏆</div>
+        <h3>Torneo VS IA</h3>
+        <p>Supera varias rondas contra rivales de IA y llega hasta la Gran Final.</p>
+        <button type="button" class="btn-select-mode">🏆 Entrar al Torneo</button>
+      </div>
+
+      <!-- Opción 3: 2 Jugadores Local -->
+      <div class="mode-card" onclick="startLocalPVP()">
+        <div class="mode-icon">👥</div>
+        <h3>2 Jugadores (PVP Local)</h3>
+        <p>Dos jugadores compartiendo el mismo dispositivo por turnos en una batalla cara a cara.</p>
+        <button type="button" class="btn-select-mode">👥 Jugar 2 Jugadores</button>
+      </div>
+    </div>
+
+    <div class="modal-bottom-actions">
+      <button type="button" class="btn-cancel" onclick="closeLocalMode();openMainMenu()">⬅️ Cancelar y Volver</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE TORNEO VS IA
+     ========================================== -->
+<div class="modal" id="tournamentModal">
+  <div class="modalbox center tournament-modalbox">
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" onclick="closeTournamentModal();openLocalMode()">⬅️ Volver</button>
+      <button type="button" class="modal-close-icon" onclick="abandonTournament()">✕</button>
+    </div>
+    <h2 id="tournamentModalTitle">🏆 TORNEO VS IA</h2>
+    <p id="tournamentMessage" class="subtitle-text">Elige la dificultad del torneo. La IA mantendrá ese nivel durante todas las rondas.</p>
+    <div id="tournamentSetup" class="tournament-difficulty-grid"></div>
+    <div id="tournamentBracket" class="tournament-bracket" style="display:none"></div>
+    <div class="tournament-modal-actions">
+      <button type="button" class="btn-select-mode" id="tournamentNextBtn" onclick="startTournamentMatch()">⚔️ Siguiente Combate</button>
+      <button type="button" class="btn-cancel" onclick="abandonTournament()">🏠 Salir del Torneo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE SELECCIÓN DE LÍDER
+     ========================================== -->
+<div class="modal" id="leaderModal">
+  <div class="modalbox">
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" id="btnBackFromLeader" onclick="closeLeaderModal()">⬅️ Volver a Selección de Modo</button>
+      <button type="button" class="modal-close-icon" onclick="closeLeaderModal()">✕</button>
+    </div>
+    
+    <div class="center" style="margin-bottom:14px;">
+      <h2 id="leaderModalTitle">👑 ELIGE TU LÍDER</h2>
+      <p class="subtitle-text">Tu líder define tu identidad, puntos de vida y habilidades pasivas en batalla.</p>
+      
+      <!-- Filtro Rápido por Set de Líderes -->
+      <div class="set-filter-tabs">
+        <button type="button" class="filter-tab active" onclick="filterLeadersBySet('ALL', this)">Todos los Sets</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('ORIGINS', this)">SET 01 · Origins</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('AWAKENING', this)">SET 02 · Awakening</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('SHADOWS', this)">SET 03 · Shadows</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('COLLISION', this)">SET 04 · Collision</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('RABBIT HOLE', this)">SET 05 · Rabbit Hole</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('EVOLUTION OF HOLE', this)">SET 06 · Evolution of Hole</button>
+        <button type="button" class="filter-tab" onclick="filterLeadersBySet('LOS KOREANOS DEL FIN', this)">SET 07 · Los KoreanOS del Fin</button>
+      </div>
+    </div>
+
+    <div id="leaderChoices" class="leader-choices"></div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE CATÁLOGO DE SETS
+     ========================================== -->
+<div class="modal" id="setsModal">
+  <div class="modalbox sets-modalbox">
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" onclick="closeSets()">⬅️ Volver al Menú Principal</button>
+      <div class="sets-header-info">
+        <span class="sets-counter-pill">🃏 <span id="setsTotalCount">0</span> cartas y líderes</span>
+      </div>
+      <button type="button" class="modal-close-icon" onclick="closeSets()">✕</button>
+    </div>
+    <div class="center" style="margin-bottom:12px;">
+      <h2>📚 CATÁLOGO OFICIAL DE EXPANSIONES &amp; CARTAS</h2>
+      <p class="subtitle-text">Explora visualmente todas las cartas, líderes, estadísticas y habilidades de las 7 expansiones.</p>
+    </div>
+
+    <!-- Controles de Filtros del Catálogo -->
+    <div class="sets-controls-bar">
+      <div class="sets-controls-top">
+        <div class="search-wrap" style="flex: 1;">
+          <input class="search-input" id="setsSearchInput" placeholder="🔍 Buscar por nombre, habilidad, rasgo o ID..." oninput="onSetsSearch(this.value)">
+          <button type="button" id="btnClearSetsSearch" class="btn-clear-search" onclick="clearSetsSearch()" style="display:none;">✕</button>
+        </div>
+        <div class="sets-type-filters" id="setsTypeFilterGroup">
+          <button type="button" class="filter-pill active" onclick="filterSetsByType('ALL', this)">Todos</button>
+          <button type="button" class="filter-pill" onclick="filterSetsByType('Líder', this)">👑 Líderes</button>
+          <button type="button" class="filter-pill" onclick="filterSetsByType('Personaje', this)">⚔️ Personajes</button>
+          <button type="button" class="filter-pill" onclick="filterSetsByType('Evento', this)">📜 Eventos</button>
+          <button type="button" class="filter-pill" onclick="filterSetsByType('Recurso', this)">💎 Recursos</button>
+        </div>
+      </div>
+
+      <!-- Filtro Rápido por Expansión / Set -->
+      <div class="set-filter-tabs" id="setsExpansionTabs" style="margin-top:6px;">
+        <button type="button" class="filter-tab active" onclick="filterSetsBySet('ALL', this)">Todas las Expansiones</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('ORIGINS', this)">SET 01 · Origins</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('AWAKENING', this)">SET 02 · Awakening</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('SHADOWS', this)">SET 03 · Shadows</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('COLLISION', this)">SET 04 · Collision</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('RABBIT_HOLE', this)">SET 05 · Rabbit Hole</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('EVOLUTION_OF_HOLE', this)">SET 06 · Evolution</button>
+        <button type="button" class="filter-tab" onclick="filterSetsBySet('LOS_KOREANOS_DEL_FIN', this)">SET 07 · Los KoreanOS</button>
+      </div>
+    </div>
+
+    <!-- Grid de Cartas Visibles -->
+    <div id="setsGrid" class="sets-grid"></div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE APERTURA DE SOBRES
+     ========================================== -->
+<div id="packModal" class="modal">
+  <div class="modalbox center">
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" onclick="closePack();openMainMenu()">⬅️ Volver al Menú Principal</button>
+      <button type="button" class="modal-close-icon" onclick="closePack();openMainMenu()">✕</button>
+    </div>
+    
+    <h2>🎁 APERTURA DE SOBRES BOOSTER</h2>
+    <p class="subtitle-text">Abre un sobre de 5 cartas de <b>Grand Legends</b> para obtener cartas legendarias y añadir a tu mazo.</p>
+    
+    <div class="pack-opener-box">
+      <div class="pack-visual-icon">📦✨</div>
+      <button id="openPackBtn" class="btn-open-booster" onclick="openBooster()">✨ ABRIR SOBRE</button>
+    </div>
+
+    <div id="packResult" class="deckgrid" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- ==========================================
+     TABLERO DE BATALLA (GAME APP)
+     ========================================== -->
+<div class="wrap" id="gameApp">
+  <!-- Barra de Estado de Jugadores -->
+  <section class="topbar">
+    <div class="panel p2">
+      <b id="p2Title">🤖 PLAYER 2 — IA</b><br>
+      <span id="aiStatus">🟢 Esperando</span><br>
+      ❤️ <span id="p2hp">5</span> · 🛡️ <span id="p2shield">3</span> · 🪙 Reserva <span id="p2don">2</span>/<span id="p2max">2</span> · 🎴 <span id="p2hand">0</span>
+    </div>
+    <div class="panel p1">
+      <b>🧑 PLAYER 1 — TÚ</b><br>
+      <span id="pStatus">🟢 Tu turno</span><br>
+      ❤️ <span id="p1hp">5</span> · 🛡️ <span id="p1shield">3</span> · 🪙 Reserva <span id="p1don">3</span>/<span id="p1max">3</span> · 🎴 <span id="p1hand">0</span>
+    </div>
+  </section>
+
+  <!-- Campo de Batalla y Arena -->
+  <section class="battle-layout">
+    <div class="arena-view-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <div style="font-family:var(--font-title); color:var(--gold-light); font-weight:800; font-size:0.9rem; letter-spacing:0.8px; text-shadow:0 0 12px rgba(255,215,0,0.4); display:flex; align-items:center; gap:8px;">
+          <span>⚡</span>
+          <span>CAMPO DE DUELO ANCESTRAL</span>
+          <span style="font-size:0.7rem; background:rgba(229,185,76,0.15); border:1px solid rgba(229,185,76,0.4); color:var(--gold-light); padding:2px 8px; border-radius:10px;">COLISEO MILENARIO</span>
+        </div>
+      </div>
+      <div class="battle-arena mode-2d" id="battleArena">
+      
+      <!-- ==========================================
+           1. LADO DEL RIVAL (PLAYER 2 / IA)
+           ========================================== -->
+      <div class="arena-half enemy-half">
+        <div class="field-side-tag enemy-tag">
+          <span>🔴 LADO DEL RIVAL (PLAYER 2 / IA)</span>
+        </div>
+
+        <!-- Fila Líder & Stats Rival -->
+        <div class="arena-row enemy-row">
+          <div class="arena-side">
+            <b>RIVAL</b>
+            <div class="arena-stat">❤️ <span id="p2hpArena">5</span></div>
+            <div class="arena-stat">🛡️ <span id="p2shieldArena">3</span></div>
+            <div class="arena-stat">🪙 <span id="p2donArena">0</span></div>
+            <div class="donpool rival-donpool" id="arenaP2DonPool" style="margin-top:4px;"></div>
+          </div>
+          <div class="arena-leader enemy" id="arenaP2Leader" onclick="selectLeaderTarget(2)" title="Atacar al Líder rival (solo si su campo está despejado)">
+            <span id="arenaP2LeaderArt">👑</span><br>
+            <b id="arenaP2LeaderName">Rival</b><br>
+            💥 5000 + DON<br>
+            <small id="arenaP2LeaderAbility">Esperando</small>
+          </div>
+        </div>
+
+        <!-- Campo de Batalla Rival -->
+        <div class="field-zone-container enemy-zone">
+          <div class="field-zone-label">🛡️ Campo de Personajes Rival</div>
+          <div class="arena-field" id="arenaP2Field"></div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           LÍNEA CENTRAL DIVISORIA / TURNO
+           ========================================== -->
+      <div class="arena-divider">
+        <div class="divider-line"></div>
+        <div class="turn-banner" id="arenaTurn">⚔️ TU TURNO</div>
+        <div class="divider-line"></div>
+      </div>
+
+      <!-- ==========================================
+           2. LADO DEL JUGADOR (PLAYER 1 - TÚ)
+           ========================================== -->
+      <div class="arena-half player-half">
+        <div class="field-side-tag player-tag">
+          <span>🟢 TU LADO (PLAYER 1)</span>
+        </div>
+
+        <!-- Campo de Batalla del Jugador -->
+        <div class="field-zone-container player-zone">
+          <div class="field-zone-label">⚔️ Tu Campo de Personajes</div>
+          <div class="arena-field" id="arenaP1Field"></div>
+        </div>
+
+        <!-- Fila Líder & Stats Jugador -->
+        <div class="arena-row player-row">
+          <div class="arena-side">
+            <b>PLAYER 1</b>
+            <div class="arena-stat">❤️ <span id="p1hpArena">5</span></div>
+            <div class="arena-stat">🛡️ <span id="p1shieldArena">3</span></div>
+            <div class="arena-stat">🪙 <span id="p1donArena">0</span></div>
+          </div>
+          <div class="arena-leader" id="arenaP1Leader" title="Arrastra monedas DON aquí para potenciar a tu Líder">
+            <span id="arenaP1LeaderArt">👑</span><br>
+            <b id="arenaP1LeaderName">Tu Líder</b><br>
+            💥 <span id="arenaP1Power">5000</span><br>
+            <small id="arenaP1LeaderAbility"></small>
+          </div>
+        </div>
+
+        <!-- Zona DON!! Jugador 1 -->
+        <div class="donzone" id="p1donZoneArena">
+          <div class="donzone-header">
+            <span>🪙 TU RESERVA DE MONEDAS DON!!</span>
+            <small style="display:block; opacity:0.85; font-size:0.75rem;">Arrastra las monedas a tus cartas o a tu Líder (+500 ATK cada una)</small>
+          </div>
+          <div class="donpool" id="arenaP1DonPool"></div>
+        </div>
+
+        <!-- Barra de Acciones de Batalla -->
+        <div class="action-bar">
+          <button type="button" class="btn-battle-action btn-end-turn" onclick="endTurn()">⏭️ Terminar Turno</button>
+          <button type="button" class="btn-battle-action" onclick="openDeckBuilder()">🛠️ Ver Mazo</button>
+          <button type="button" class="btn-battle-action" onclick="exportBattleReplay()" aria-label="Exportar replay de la partida">📥 Replay</button>
+          <button type="button" class="btn-battle-action btn-cancel" onclick="confirmExitToMenu()">🏠 Salir al Menú</button>
+        </div>
+
+        <div class="center" id="activeHandLabel"></div>
+        <div class="hand" id="arenaHand"></div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Registro de Batalla Lateral -->
+    <aside class="battle-log">
+      <h3>📜 REGISTRO DE BATALLA</h3>
+      <div id="aiRealtime" class="center"></div>
+      <div class="battle-log-list" id="arenaLog"></div>
+    </aside>
+  </section>
+
+  <!-- Controles Inferiores de Batalla (Solo Robar, Terminar Turno y Reiniciar Partida) -->
+  <div class="bottom-battle-controls center" style="margin: 16px 0;">
+    <button type="button" id="drawBtn" class="btn-battle-action" onclick="drawCard()">🎴 Robar</button>
+    <button type="button" id="endBtn" class="btn-battle-action btn-end-turn" onclick="endTurn()">⏭️ Terminar Turno</button>
+    <button type="button" id="resetBtn" class="btn-battle-action btn-danger" onclick="reset()">🔄 Reiniciar Partida</button>
+  </div>
+  
+  <p class="center">
+    <span class="badge">🪙 DON arrastrable</span> 
+    <span class="badge">🛡️ Escudos</span> 
+    <span class="badge">🛡️ Blocker</span> 
+    <span class="badge">✨ Habilidades activables</span>
+  </p>
+  
+  <h2>🪦 Cementerio</h2>
+  <div class="panel">P1: <span id="p1grave">0</span> · P2: <span id="p2grave">0</span></div>
+  
+  <div class="combo-panel">
+    <b>💥 COMBO</b>
+    <div id="comboStatus">P1: 0 · P2: 0 · Se reinicia al comenzar el siguiente turno.</div>
+  </div>
+  
+  <div class="shadow-panel">
+    <b>🌑 SOMBRAS DEL INFIERNO</b>
+    <div id="shadowStatus">Cada jugador puede usarla 1 vez por partida cuando una carta sea derrotada.</div>
+  </div>
+
+  <div class="shadow-panel evolution-panel">
+    <b>🧬 EVOLUCIÓN ALARMANTE</b>
+    <div id="evolutionStatus">P1: 🧬 disponible · P2: 🧬 disponible · Sombras se bloquea al evolucionar.</div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE CONSTRUCTOR DE MAZOS (DECK BUILDER)
+     ========================================== -->
+<!-- ==========================================
+     MODAL DE RESUMEN POST-PARTIDA (REGISTRO OFICIAL DE DUELO TCG)
+     ========================================== -->
+<div id="soloPostGameModal" class="modal solo-system-overlay">
+  <div class="modalbox solo-system-box">
+    <!-- Barra Holográfica Superior del Sistema -->
+    <div class="solo-system-header">
+      <div class="solo-system-tag">
+        <span class="solo-pulse-dot"></span> [ REGISTRO OFICIAL DE DUELO TCG ]
+      </div>
+      <button type="button" class="modal-close-icon solo-close" onclick="closeSoloPostGame()">✕</button>
+    </div>
+
+    <!-- Estandarte Principal de Resultado -->
+    <div class="solo-result-banner" id="soloResultBanner">
+      <div class="solo-banner-icon" id="soloBannerIcon">🏆</div>
+      <div class="solo-banner-texts">
+        <h2 id="soloResultTitle" class="solo-result-title">¡VICTORIA EN EL DUELO!</h2>
+        <div id="soloResultSubtitle" class="solo-result-subtitle">Has dominado el campo de batalla con tu mazo y estrategia</div>
+      </div>
+    </div>
+
+    <!-- Evaluación de Rango del Duelista -->
+    <div class="solo-rank-container">
+      <div class="solo-rank-label">EVALUACIÓN DEL DUELISTA</div>
+      <div class="solo-rank-badge rank-s" id="soloRankBadge">
+        <span class="solo-rank-letter" id="soloRankLetter">S</span>
+        <span class="solo-rank-desc" id="soloRankDesc">GRAN LEYENDA</span>
+      </div>
+    </div>
+
+    <!-- Estadísticas de Combate TCG -->
+    <div class="solo-stats-section">
+      <div class="solo-section-title">📊 ESTADÍSTICAS DEL DUELO</div>
+      <div class="solo-stats-grid">
+        <div class="solo-stat-item">
+          <div class="solo-stat-icon">💥</div>
+          <div class="solo-stat-data">
+            <span class="solo-stat-val" id="soloStatDamage">0</span>
+            <span class="solo-stat-name">Daño Infligido</span>
+          </div>
+        </div>
+        <div class="solo-stat-item">
+          <div class="solo-stat-icon">🃏</div>
+          <div class="solo-stat-data">
+            <span class="solo-stat-val" id="soloStatKills">0</span>
+            <span class="solo-stat-name">Cartas Derrotadas</span>
+          </div>
+        </div>
+        <div class="solo-stat-item">
+          <div class="solo-stat-icon">🪙</div>
+          <div class="solo-stat-data">
+            <span class="solo-stat-val" id="soloStatDon">0</span>
+            <span class="solo-stat-name">DON!! Desplegados</span>
+          </div>
+        </div>
+        <div class="solo-stat-item">
+          <div class="solo-stat-icon">⏳</div>
+          <div class="solo-stat-data">
+            <span class="solo-stat-val" id="soloStatTurns">1</span>
+            <span class="solo-stat-name">Turnos de Duelo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="solo-battle-history-section">
+      <div class="solo-section-title">📜 REGISTRO COMPLETO DEL COMBATE</div>
+      <div id="soloBattleHistory" class="solo-battle-history" aria-live="polite"></div>
+    </div>
+
+    <!-- Recompensas y Barra de EXP del Duelista -->
+    <div class="solo-rewards-section">
+      <div class="solo-section-title">🎁 RECOMPENSAS DEL DUELO</div>
+      
+      <!-- Progreso de EXP y Nivel de Duelista -->
+      <div class="solo-exp-box">
+        <div class="solo-exp-header">
+          <span class="solo-exp-level" id="soloHunterLevel">👑 Duelista Nivel 1</span>
+          <span class="solo-exp-gained" id="soloExpGained">+500 EXP</span>
+        </div>
+        <div class="solo-exp-bar-bg">
+          <div class="solo-exp-bar-fill" id="soloExpBarFill" style="width: 0%"></div>
+        </div>
+        <div class="solo-level-up-alert" id="soloLevelUpAlert" style="display:none">
+          ✨ ¡SUBIDA DE NIVEL! HAS AUMENTADO TU PRESTIGIO COMO DUELISTA ✨
+        </div>
+      </div>
+
+      <!-- Tarjetas de Botín / Recompensas TCG -->
+      <div class="solo-loot-grid">
+        <div class="solo-loot-card">
+          <div class="solo-loot-icon">📦</div>
+          <div class="solo-loot-info">
+            <b id="soloLootPacks">+10 Sobres</b>
+            <small>Sobres Booster</small>
+          </div>
+        </div>
+        <div class="solo-loot-card">
+          <div class="solo-loot-icon">🪙</div>
+          <div class="solo-loot-info">
+            <b id="soloLootGold">+500 Monedas</b>
+            <small>Oro de Recompensa</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de Acción Adaptados a TCG -->
+    <div class="solo-actions-row">
+      <button type="button" class="btn-solo-primary" id="btnSoloClaimPacks" onclick="claimSoloRewardsAndOpenPacks()">
+        🎁 Reclamar &amp; Abrir Sobres
+      </button>
+      <button type="button" class="btn-solo-secondary" onclick="retrySoloBattle()">
+        🔄 Jugar Nueva Partida
+      </button>
+      <button type="button" class="btn-solo-tertiary" onclick="exitSoloToMenu()">
+        🏠 Menú Principal
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="deckModal">
+  <div class="modalbox deck-modalbox">
+    <!-- Barra de Navegación y Acciones Principales -->
+    <div class="modal-nav-bar">
+      <button type="button" class="btn-nav-back" id="btnBackFromDeck" onclick="handleDeckBuilderBack()">⬅️ Volver</button>
+      <div class="deck-top-actions">
+        <button type="button" class="btn-head-action" onclick="openSaveDeckModal()" title="Guardar mazo con un nombre">💾 Guardar</button>
+        <button type="button" class="btn-head-action" onclick="loadStarterDeckPreset()" title="Cargar plantilla equilibrada de 40 cartas">✨ Mazo Inicial</button>
+        <button type="button" class="btn-head-action btn-danger" onclick="clearCustomDeck()" title="Vaciar todas las cartas del mazo">🗑️ Vaciar</button>
+        <button type="button" class="btn-head-action" onclick="openDeckShareModal()" title="Exportar o importar código del mazo">📋 Código</button>
+        <button type="button" class="btn-head-action" onclick="toggleSavedDecksPanel()" id="btnToggleSavedDecks" title="Ver lista de mazos guardados">📂 Mis Mazos (<span id="savedDecksCountBadge">0</span>)</button>
+      </div>
+      <button type="button" class="modal-close-icon" onclick="handleDeckBuilderBack()">✕</button>
+    </div>
+
+    <!-- Panel Desplegable de Mazos Guardados -->
+    <div class="saved-decks-panel" id="savedDecksPanel" style="display:none;">
+      <div class="saved-decks-header">
+        <div class="saved-decks-title">📂 MIS MAZOS GUARDADOS</div>
+        <button type="button" class="small" onclick="toggleSavedDecksPanel()">✕ Ocultar</button>
+      </div>
+      <div id="savedDecksList" class="saved-decks-list"></div>
+    </div>
+
+    <!-- Workspace en 2 Columnas -->
+    <div class="deck-builder-workspace">
+      
+      <!-- COLUMNA IZQUIERDA: BIBLIOTECA Y FILTROS TÁCTICOS -->
+      <section class="deck-library-pane">
+        <div class="library-header-bar">
+          <h3 style="margin:0;">📚 Catálogo de Cartas (<span id="libraryFilteredCount">0</span>)</h3>
+          <span class="library-hint">Haz clic en <b>＋ Añadir</b> para incorporar a tu baraja (máx 4 copias).</span>
+        </div>
+
+        <!-- Filtros Tácticos Avanzados -->
+        <div class="deck-filter-controls">
+          <!-- Fila 1: Búsqueda y Set -->
+          <div class="filter-row-primary">
+            <div class="search-wrap">
+              <input class="search-input" id="search" placeholder="🔍 Buscar por nombre o habilidad..." oninput="onDeckSearchInput(this.value)">
+              <button type="button" id="btnClearSearch" class="btn-clear-search" onclick="clearDeckSearch()" style="display:none;">✕</button>
+            </div>
+            <select id="setFilter" class="filter-select" onchange="onDeckSetChange(this.value)">
+              <option value="ALL">📚 Todas las Expansiones</option>
+              <option value="ORIGINS">SET 01 — ORIGINS</option>
+              <option value="AWAKENING">SET 02 — AWAKENING</option>
+              <option value="SHADOWS">SET 03 — SHADOWS</option>
+              <option value="COLLISION">SET 04 — COLLISION</option>
+              <option value="RABBIT_HOLE">SET 05 — RABBIT HOLE</option>
+              <option value="EVOLUTION_OF_HOLE">SET 06 — EVOLUTION OF HOLE</option>
+              <option value="LOS_KOREANOS_DEL_FIN">SET 07 — LOS KOREANOS DEL FIN</option>
+            </select>
+            <select id="sortFilter" class="filter-select" onchange="onDeckSortChange(this.value)">
+              <option value="cost-asc">⚡ Coste: Menor a Mayor</option>
+              <option value="cost-desc">⚡ Coste: Mayor a Menor</option>
+              <option value="power-desc">💥 Poder: Mayor a Menor</option>
+              <option value="name-asc">🔤 Nombre: A - Z</option>
+              <option value="rarity-desc">⭐ Rareza: Mayor a Menor</option>
+            </select>
+          </div>
+
+          <!-- Fila 2: Filtros de Tipo y Coste -->
+          <div class="filter-row-secondary">
+            <div class="filter-pills-group" id="deckTypeFilterGroup">
+              <button type="button" class="filter-pill active" onclick="setDeckTypeFilter('ALL', this)">Todos</button>
+              <button type="button" class="filter-pill" onclick="setDeckTypeFilter('Personaje', this)">⚔️ Personajes</button>
+              <button type="button" class="filter-pill" onclick="setDeckTypeFilter('Evento', this)">📜 Eventos</button>
+              <button type="button" class="filter-pill" onclick="setDeckTypeFilter('Recurso', this)">💎 Recursos</button>
+            </div>
+            <div class="filter-cost-group" id="deckCostFilterGroup">
+              <span class="cost-filter-label">Coste:</span>
+              <button type="button" class="cost-chip active" onclick="setDeckCostFilter('ALL', this)">*</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(1, this)">1</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(2, this)">2</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(3, this)">3</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(4, this)">4</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(5, this)">5</button>
+              <button type="button" class="cost-chip" onclick="setDeckCostFilter(6, this)">6+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Cartas del Catálogo -->
+        <div class="deckgrid" id="deckGrid"></div>
+      </section>
+
+      <!-- COLUMNA DERECHA: MAZO ACTIVO, CURVA DE COSTES Y LÍDER -->
+      <section class="deck-tray-pane">
+        
+        <!-- Tarjeta del Líder Asignado -->
+        <div class="deck-leader-panel" id="deckLeaderPanel">
+          <div class="leader-panel-header">
+            <span class="panel-subtitle">👑 LÍDER DEL MAZO</span>
+            <button type="button" class="btn-change-leader" onclick="openDeckLeaderPicker()">Cambiar ➔</button>
+          </div>
+          <div class="leader-current-card" id="deckCurrentLeaderCard"></div>
+        </div>
+
+        <!-- Contador y Barra de Progreso del Mazo -->
+        <div class="deck-counter-box">
+          <div class="counter-header-row">
+            <span class="counter-title">🎴 TOTAL DEL MAZO</span>
+            <span class="counter-badge" id="deckCounterBadge"><b id="deckCount">0</b> / 40</span>
+          </div>
+          <div class="deck-progress-bar-wrap">
+            <div class="deck-progress-fill" id="deckProgressFill" style="width: 0%;"></div>
+          </div>
+          <div id="deckValidationMessage" class="deck-validation" role="status">Mazo predeterminado disponible.</div>
+        </div>
+
+        <!-- Desglose por Tipo de Carta -->
+        <div class="deck-type-stats" id="deckTypeStats">
+          <div class="stat-pill"><span class="stat-icon">⚔️</span> Personajes: <b id="deckCharsCount">0</b></div>
+          <div class="stat-pill"><span class="stat-icon">📜</span> Eventos: <b id="deckEventsCount">0</b></div>
+          <div class="stat-pill"><span class="stat-icon">💎</span> Recursos: <b id="deckResourcesCount">0</b></div>
+        </div>
+
+        <!-- Curva de Costes de Maná -->
+        <div class="deck-curve-section">
+          <div class="curve-title">⚡ CURVA DE COSTES DE DON!!</div>
+          <div class="cost-curve-chart" id="deckCostCurve"></div>
+        </div>
+
+        <!-- Lista Agrupada de Cartas en el Mazo -->
+        <div class="deck-list-container">
+          <div class="deck-list-header">
+            <span>📋 CARTAS EN EL MAZO (<span id="deckUniqueCount">0</span> únicas)</span>
+            <small>Clic en ✕ o fila para quitar</small>
+          </div>
+          <div class="deck-cards-list" id="deckCardsList"></div>
+        </div>
+
+        <!-- Botón de Uso Rápido -->
+        <div class="deck-use-footer">
+          <button type="button" class="btn-primary-action btn-use-deck-main" id="btnUseDeckMain" onclick="useActiveDeck()">
+            ▶️ USAR ESTE MAZO EN BATALLA
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Auxiliar: Guardar Mazo con Nombre -->
+<div class="modal" id="saveDeckModal" role="dialog" aria-modal="true" aria-labelledby="saveDeckTitle">
+  <div class="modalbox" style="max-width: 440px;">
+    <h3 id="saveDeckTitle">💾 Guardar Mazo</h3>
+    <p class="subtitle-text">Ingresa un nombre para identificar tu baraja estratégica:</p>
+    <div style="margin: 14px 0;">
+      <input type="text" id="saveDeckNameInput" class="search-input" maxlength="40" placeholder="Ej: Piratas del Nuevo Mundo">
+    </div>
+    <div class="row" style="justify-content: flex-end; gap: 8px;">
+      <button type="button" class="btn-battle-action" onclick="closeSaveDeckModal()">Cancelar</button>
+      <button type="button" class="btn-primary-action" onclick="confirmSaveDeckModal()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Auxiliar: Exportar e Importar Mazo -->
+<div class="modal" id="deckShareModal" role="dialog" aria-modal="true" aria-labelledby="deckShareTitle">
+  <div class="modalbox" style="max-width: 520px;">
+    <div class="modal-nav-bar">
+      <h3 id="deckShareTitle" style="margin:0;">📋 Código del Mazo</h3>
+      <button type="button" class="modal-close-icon" onclick="closeDeckShareModal()">✕</button>
+    </div>
+    <p class="subtitle-text">Copia este código para respaldar tu mazo o pega un código para importarlo:</p>
+    <textarea id="deckShareTextarea" style="width:100%; height:130px; background:#0a0e17; border:1px solid #334155; border-radius:8px; color:#f1f5f9; padding:10px; font-family:monospace; font-size:0.8rem; resize:none;"></textarea>
+    <div id="deckShareMsg" style="font-size:0.82rem; margin:6px 0; color:#38bdf8;"></div>
+    <div class="row" style="justify-content: space-between; gap: 8px; margin-top: 10px;">
+      <button type="button" class="btn-head-action" onclick="copyDeckCodeToClipboard()">📋 Copiar al Portapapeles</button>
+      <button type="button" class="btn-primary-action" onclick="importDeckFromCode()">📥 Importar Código</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Auxiliar: Selector de Líder para el Mazo -->
+<div class="modal" id="deckLeaderPickerModal" role="dialog" aria-modal="true" aria-labelledby="deckLeaderPickerTitle">
+  <div class="modalbox" style="max-width: 800px;">
+    <div class="modal-nav-bar">
+      <h3 id="deckLeaderPickerTitle" style="margin:0;">👑 Seleccionar Líder para tu Mazo</h3>
+      <button type="button" class="modal-close-icon" onclick="closeDeckLeaderPicker()">✕</button>
+    </div>
+    <p class="subtitle-text">Elige el Líder que comandará tu baraja:</p>
+    <div id="deckLeaderGrid" class="leader-choices" style="max-height: 480px; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<!-- Scripts del juego -->
+<script src="js/cards.js?v=6.8.3"></script>
+<script src="js/rules.js?v=6.8.3"></script>
+<script src="js/ai.js?v=6.8.3"></script>
+<script src="js/packs.js?v=6.8.3"></script>
+<script src="js/accounts.js?v=6.8.3"></script>
+<script src="js/online.js?v=6.8.3"></script>
+<script src="js/duel-visuals.js?v=6.8.3"></script>
+<script src="js/game.js?v=6.8.3"></script>
+</body>
+</html>

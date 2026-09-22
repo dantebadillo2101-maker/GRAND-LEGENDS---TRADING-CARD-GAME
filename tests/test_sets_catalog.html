@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Grand Legends TCG - Test Catálogo de Sets</title>
+  <style>
+    body { font-family: monospace; background: #121214; color: #e1e1e6; padding: 20px; }
+    .pass { color: #04d361; }
+    .fail { color: #ff5555; font-weight: bold; }
+    .summary { margin-top: 20px; font-size: 1.2em; border-top: 1px solid #333; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Grand Legends TCG — Sets Catalog Test Suite</h1>
+  <div id="test-results"></div>
+  <div id="test-summary" class="summary"></div>
+
+  <!-- Mock DOM de los elementos de index.html del catálogo de sets -->
+  <div id="mainMenu" class="modal open"></div>
+  
+  <div class="modal" id="setsModal">
+    <div class="modalbox sets-modalbox">
+      <div class="sets-header-info">
+        <span class="sets-counter-pill">🃏 <span id="setsTotalCount">0</span> cartas y líderes</span>
+      </div>
+      <div class="sets-controls-bar">
+        <input class="search-input" id="setsSearchInput">
+        <button type="button" id="btnClearSetsSearch" style="display:none;"></button>
+        <div class="sets-type-filters" id="setsTypeFilterGroup">
+          <button type="button" class="filter-pill active">Todos</button>
+          <button type="button" class="filter-pill">👑 Líderes</button>
+          <button type="button" class="filter-pill">⚔️ Personajes</button>
+          <button type="button" class="filter-pill">📜 Eventos</button>
+          <button type="button" class="filter-pill">💎 Recursos</button>
+        </div>
+        <div class="set-filter-tabs" id="setsExpansionTabs">
+          <button type="button" class="filter-tab active">Todas las Expansiones</button>
+          <button type="button" class="filter-tab">SET 01 · Origins</button>
+          <button type="button" class="filter-tab">SET 02 · Awakening</button>
+          <button type="button" class="filter-tab">SET 03 · Shadows</button>
+          <button type="button" class="filter-tab">SET 04 · Collision</button>
+          <button type="button" class="filter-tab">SET 05 · Rabbit Hole</button>
+          <button type="button" class="filter-tab">SET 06 · Evolution</button>
+          <button type="button" class="filter-tab">SET 07 · Los KoreanOS</button>
+        </div>
+      </div>
+      <div id="setsGrid" class="sets-grid"></div>
+    </div>
+  </div>
+
+  <!-- Scripts requeridos -->
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+
+  <script>
+    const resultsContainer = document.getElementById("test-results");
+    const summaryContainer = document.getElementById("test-summary");
+    let passed = 0;
+    let failed = 0;
+
+    function assert(condition, message) {
+      const div = document.createElement("div");
+      if (condition) {
+        passed++;
+        div.className = "pass";
+        div.textContent = "✔ PASS: " + message;
+      } else {
+        failed++;
+        div.className = "fail";
+        div.textContent = "✖ FAIL: " + message;
+      }
+      resultsContainer.appendChild(div);
+      console.log(div.textContent);
+    }
+
+    // 1. Abrir el modal de Sets y verificar clase open
+    openSets();
+    const modal = document.getElementById('setsModal');
+    assert(modal.classList.contains('open'), "openSets abre el modal con clase 'open'");
+
+    // 2. Verificar que las cartas y líderes se renderizan visualmente
+    const grid = document.getElementById('setsGrid');
+    const allTiles = grid.querySelectorAll('.catalog-card-tile');
+    assert(allTiles.length > 250, "El catálogo carga todas las cartas y líderes (Total: " + allTiles.length + ")");
+
+    // 3. Verificar que cada carta tiene arte, nombre, habilidad y código
+    const firstTile = allTiles[0];
+    assert(firstTile.querySelector('.tile-art') !== null, "La primera carta contiene arte visual (.tile-art)");
+    assert(firstTile.querySelector('.tile-name') !== null, "La primera carta contiene título/nombre (.tile-name)");
+    assert(firstTile.querySelector('.tile-ability') !== null, "La primera carta contiene texto de habilidad (.tile-ability)");
+    assert(firstTile.querySelector('.tile-set-code') !== null, "La primera carta contiene código de set (.tile-set-code)");
+
+    // 4. Verificar filtrado por Set (ORIGINS)
+    filterSetsBySet('ORIGINS');
+    const originsTiles = grid.querySelectorAll('.catalog-card-tile');
+    assert(originsTiles.length === 33, "Filtrar por ORIGINS muestra exactamente 33 elementos (30 cartas + 3 líderes)");
+
+    // 5. Verificar filtrado por Tipo (Líder)
+    filterSetsByType('Líder');
+    const originsLeaders = grid.querySelectorAll('.catalog-card-tile');
+    assert(originsLeaders.length === 3, "Filtrar por Líderes en ORIGINS muestra exactamente 3 líderes");
+    assert(originsLeaders[0].classList.contains('type-lider'), "El líder tiene la clase de tipo .type-lider");
+    assert(originsLeaders[0].querySelector('.tile-life-badge') !== null, "El líder muestra el badge de vida ❤️ (.tile-life-badge)");
+
+    // 6. Verificar filtrado por Tipo (Personaje)
+    filterSetsByType('Personaje');
+    const originsChars = grid.querySelectorAll('.catalog-card-tile');
+    assert(originsChars.length > 0, "Filtrar por Personajes muestra cartas de personaje");
+    assert(originsChars[0].querySelector('.tile-power') !== null, "Los personajes muestran el badge de poder 💥 (.tile-power)");
+
+    // 7. Restablecer sets y probar búsqueda por texto
+    filterSetsBySet('ALL');
+    filterSetsByType('ALL');
+    onSetsSearch('Amanecer');
+    const searchTiles = grid.querySelectorAll('.catalog-card-tile');
+    assert(searchTiles.length > 0, "La búsqueda de 'Amanecer' encuentra cartas o líderes correspondientes (Total: " + searchTiles.length + ")");
+
+    // 8. Limpiar búsqueda
+    clearSetsSearch();
+    const afterClearTiles = grid.querySelectorAll('.catalog-card-tile');
+    assert(afterClearTiles.length === allTiles.length, "clearSetsSearch restaura el catálogo completo");
+
+    // 9. Cerrar modal
+    closeSets();
+    assert(!modal.classList.contains('open'), "closeSets cierra el modal eliminando la clase 'open'");
+
+    summaryContainer.innerHTML = "<strong>Total Pruebas: " + (passed + failed) + " | <span class='pass'>Pasadas: " + passed + "</span> | <span class='fail'>Fallidas: " + failed + "</span></strong>" +
+      (failed === 0 ? "<br><div class='pass' style='font-size:1.4em;margin-top:10px;'>★ TODAS LAS PRUEBAS DE CATALOGO DE SETS PASARON CON EXITO ★</div>" : "");
+  </script>
+</body>
+</html>

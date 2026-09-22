@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Grand Legends TCG - Test Deck Builder</title>
+  <style>
+    body { font-family: monospace; background: #121214; color: #e1e1e6; padding: 20px; }
+    .pass { color: #04d361; }
+    .fail { color: #ff5555; font-weight: bold; }
+    .summary { margin-top: 20px; font-size: 1.2em; border-top: 1px solid #333; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Grand Legends TCG — Deck Builder Test Suite</h1>
+  <div id="test-results"></div>
+  <div id="test-summary" class="summary"></div>
+
+  <!-- Mock DOM de los elementos de index.html del constructor de mazos -->
+  <div id="deckModal" class="modal">
+    <div id="deckCount">0</div>
+    <div id="deckCounterBadge"></div>
+    <div id="deckProgressFill"></div>
+    <div id="deckValidationMessage"></div>
+    <div id="deckCharsCount">0</div>
+    <div id="deckEventsCount">0</div>
+    <div id="deckResourcesCount">0</div>
+    <div id="deckUniqueCount">0</div>
+    <div id="savedDecksCountBadge">0</div>
+    <div id="libraryFilteredCount">0</div>
+    <div id="search"></div>
+    <button id="btnClearSearch" style="display:none;"></button>
+    <select id="setFilter"><option value="ALL">ALL</option></select>
+    <select id="sortFilter"><option value="cost-asc">cost-asc</option></select>
+    <div id="deckTypeFilterGroup">
+      <button class="filter-pill active">Todos</button>
+      <button class="filter-pill">Personajes</button>
+      <button class="filter-pill">Eventos</button>
+      <button class="filter-pill">Recursos</button>
+    </div>
+    <div id="deckCostFilterGroup">
+      <button class="cost-chip active">*</button>
+      <button class="cost-chip">1</button>
+      <button class="cost-chip">2</button>
+      <button class="cost-chip">3</button>
+      <button class="cost-chip">4</button>
+      <button class="cost-chip">5</button>
+      <button class="cost-chip">6+</button>
+    </div>
+    <div id="deckCurrentLeaderCard"></div>
+    <div id="deckCostCurve"></div>
+    <div id="deckCardsList"></div>
+    <div id="deckGrid"></div>
+    <div id="savedDecksPanel" style="display:none;"></div>
+    <div id="savedDecksList"></div>
+  </div>
+
+  <div id="saveDeckModal" class="modal">
+    <input id="saveDeckNameInput" type="text" />
+  </div>
+
+  <div id="deckShareModal" class="modal">
+    <textarea id="deckShareTextarea"></textarea>
+    <div id="deckShareMsg"></div>
+  </div>
+
+  <div id="deckLeaderPickerModal" class="modal">
+    <div id="deckLeaderGrid"></div>
+  </div>
+
+  <!-- Scripts del juego -->
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+
+  <script>
+    const resultsContainer = document.getElementById("test-results");
+    const summaryContainer = document.getElementById("test-summary");
+    let passed = 0;
+    let failed = 0;
+
+    function assert(condition, message) {
+      const div = document.createElement("div");
+      if (condition) {
+        passed++;
+        div.className = "pass";
+        div.textContent = "✔ PASS: " + message;
+      } else {
+        failed++;
+        div.className = "fail";
+        div.textContent = "✖ FAIL: " + message;
+      }
+      resultsContainer.appendChild(div);
+      console.log(div.textContent);
+    }
+
+    // 1. Verificar carga de plantilla inicial de 40 cartas
+    window.confirm = () => true;
+    window.alert = () => {};
+    loadStarterDeckPreset();
+    assert(customDeck.length === 40, "loadStarterDeckPreset crea exactamente 40 cartas");
+    const valid = validateCustomDeck();
+    assert(valid.valid === true, "La plantilla de mazo inicial es 100% válida según las reglas del TCG");
+
+    // 2. Verificar límite de 4 copias por carta en la plantilla
+    const copyCounts = {};
+    customDeck.forEach(c => { copyCounts[c.name] = (copyCounts[c.name] || 0) + 1; });
+    const maxCopies = Math.max(...Object.values(copyCounts));
+    assert(maxCopies <= 4, "Ninguna carta excede el límite de 4 copias en el mazo (" + maxCopies + " máx)");
+
+    // 3. Verificar desglose de tipos en la UI
+    renderDeckTray();
+    const charsCount = Number(document.getElementById("deckCharsCount").textContent);
+    const eventsCount = Number(document.getElementById("deckEventsCount").textContent);
+    const resourcesCount = Number(document.getElementById("deckResourcesCount").textContent);
+    assert(charsCount + eventsCount + resourcesCount === 40, "El desglose por tipo suma 40 cartas (" + charsCount + " Personajes, " + eventsCount + " Eventos, " + resourcesCount + " Recursos)");
+
+    // 4. Verificar curva de costes de maná
+    renderDeckCostCurve();
+    const curveCols = document.getElementById("deckCostCurve").querySelectorAll(".cost-curve-col");
+    assert(curveCols.length === 6, "La curva de costes tiene 6 columnas (1, 2, 3, 4, 5, 6+)");
+
+    // 5. Verificar lista agrupada de cartas en el mazo
+    renderDeckCardsList();
+    const listRows = document.getElementById("deckCardsList").querySelectorAll(".deck-card-row");
+    assert(listRows.length > 0 && listRows.length <= 40, "La lista agrupada renderiza filas correctamente (" + listRows.length + " cartas únicas)");
+
+    // 6. Quitar una copia de una carta
+    const initialTotal = customDeck.length;
+    const cardToRemove = customDeck[0].name;
+    removeOneCardFromCustomDeck(cardToRemove);
+    assert(customDeck.length === initialTotal - 1, "removeOneCardFromCustomDeck reduce el total del mazo en 1");
+
+    // 7. Añadir cartas respetando el límite de 4 copias
+    const testCard = LIBRARY[0];
+    customDeck = customDeck.filter(c => c.name !== testCard.name);
+    assert(customDeck.filter(c => c.name === testCard.name).length === 0, "Se limpia la carta de prueba");
+    // Añadir 4 copias
+    for (let i = 0; i < 4; i++) {
+      if (customDeck.length < 40) customDeck.push(cloneCard(testCard));
+    }
+    const copiesAfterAdd = customDeck.filter(c => c.name === testCard.name).length;
+    assert(copiesAfterAdd === 4, "Se pueden añadir hasta 4 copias de la misma carta");
+
+    // 8. Selector de Líder
+    const originalLeader = selectedLeader;
+    const anotherLeader = LEADERS.find(l => l.id !== originalLeader.id) || LEADERS[1];
+    selectLeaderForCustomDeck(anotherLeader.id);
+    assert(selectedLeader.id === anotherLeader.id, "selectLeaderForCustomDeck actualiza el líder del mazo a " + anotherLeader.name);
+
+    // 9. Guardar Mazo con Nombre Personalizado
+    const saveName = "Mazo de Prueba Táctico " + Date.now();
+    document.getElementById("saveDeckNameInput").value = saveName;
+    // Rellenar hasta 40 para que sea válido
+    while (customDeck.length < 40) {
+      customDeck.push(cloneCard(LIBRARY.find(c => customDeck.filter(x => x.name === c.name).length < 4)));
+    }
+    confirmSaveDeckModal();
+    const savedFound = savedDecks.find(d => d.name === saveName);
+    assert(!!savedFound, "El mazo se guarda con éxito en savedDecks con su nombre (" + saveName + ")");
+    assert(savedFound && savedFound.leaderId === anotherLeader.id, "El mazo guardado asocia correctamente su líder (" + anotherLeader.id + ")");
+
+    // 10. Exportar e Importar Código de Mazo
+    openDeckShareModal();
+    const exportedCode = document.getElementById("deckShareTextarea").value;
+    assert(exportedCode && exportedCode.length > 20, "openDeckShareModal genera un código de exportación válido");
+
+    // Modificar mazo y reimportar
+    customDeck = [];
+    assert(customDeck.length === 0, "El mazo se vacía temporalmente para probar la importación");
+    document.getElementById("deckShareTextarea").value = exportedCode;
+    importDeckFromCode();
+    assert(customDeck.length === 40, "importDeckFromCode restaura exactamente las 40 cartas del mazo");
+
+    // 11. Vaciar Mazo
+    clearCustomDeck();
+    assert(customDeck.length === 0, "clearCustomDeck vacía todas las cartas del mazo");
+
+    // 12. Filtros del Catálogo
+    onDeckSearchInput("Lobo");
+    const filteredLobo = LIBRARY.filter(c => c.name.toLowerCase().includes("lobo"));
+    assert(filteredLobo.length > 0, "Búsqueda por texto filtra cartas correctamente");
+    clearDeckSearch();
+    assert(deckFilterState.search === "", "clearDeckSearch limpia el filtro de búsqueda");
+
+    // Resumen
+    summaryContainer.innerHTML = `<strong>Total Pruebas: ${passed + failed} | <span class="pass">Pasadas: ${passed}</span> | <span class="fail">Fallidas: ${failed}</span></strong>`;
+    if (failed === 0) {
+      summaryContainer.innerHTML += '<br><div class="pass" style="font-size:1.4em;margin-top:10px;">★ TODAS LAS PRUEBAS DE DECK BUILDER COMPLETADAS CON ÉXITO ★</div>';
+    }
+  </script>
+</body>
+</html>

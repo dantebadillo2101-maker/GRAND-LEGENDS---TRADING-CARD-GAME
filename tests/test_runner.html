@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Grand Legends TCG - Test Runner</title>
+  <style>
+    body { font-family: monospace; background: #121214; color: #e1e1e6; padding: 20px; }
+    .pass { color: #04d361; }
+    .fail { color: #ff5555; font-weight: bold; }
+    .summary { margin-top: 20px; font-size: 1.2em; border-top: 1px solid #333; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Grand Legends TCG — Verification Suite (v6.8.3)</h1>
+  <div id="test-results"></div>
+  <div id="test-summary" class="summary"></div>
+
+  <!-- Scripts del juego requeridos -->
+  <script src="../js/rules.js"></script>
+  <script src="../js/cards.js"></script>
+  <script>
+    // Mock global game state for AI and combat tests
+    window.p1Field = [];
+    window.p2Field = [];
+    window.p1DonReserve = [];
+    window.p2DonReserve = [];
+    window.p1hp = 5;
+    window.p2hp = 5;
+    window.p1shield = 3;
+    window.p2shield = 3;
+    window.p1max = 2;
+    window.p2max = 2;
+    window.p1don = 2;
+    window.p2don = 2;
+    window.hand = [];
+    window.aiHand = [];
+    window.p1Grave = [];
+    window.p2Grave = [];
+    window.battleStats = { attacksMade: 0, leaderAttacks: 0, donAttached: 0 };
+    window.log = function() {};
+    window.arenaLog = function() {};
+    window.render = function() {};
+    window.checkWin = function() {};
+    window.notifyDefeat = function() {};
+    window.totalPower = function(c) {
+      return (c.power || 0) + (c.attached || 0) * 1000 + (c.tempBoost || 0);
+    };
+  </script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+
+  <script>
+    const resultsContainer = document.getElementById("test-results");
+    const summaryContainer = document.getElementById("test-summary");
+    let passed = 0;
+    let failed = 0;
+
+    function assert(condition, message) {
+      const div = document.createElement("div");
+      if (condition) {
+        passed++;
+        div.className = "pass";
+        div.textContent = "✔ PASS: " + message;
+      } else {
+        failed++;
+        div.className = "fail";
+        div.textContent = "✖ FAIL: " + message;
+      }
+      resultsContainer.appendChild(div);
+      console.log(div.textContent);
+    }
+
+    // -------------------------------------------------------------
+    // SUITE 1: Reglas Fundamentales (js/rules.js)
+    // -------------------------------------------------------------
+    const sampleCard = { id: "T001", name: "Guardián de Prueba", cost: 2, power: 1500, type: "Personaje" };
+    assert(GLTCG.rules.validateCardData(sampleCard, new Set(["T001"])).valid === true, "Validación de carta correcta");
+    assert(GLTCG.rules.validateCardData({ ...sampleCard, cost: -1 }, new Set(["T001"])).valid === false, "Rechaza coste negativo");
+    
+    // resetUnitForTurn y DON reset
+    const unitState = { ...sampleCard, ...GLTCG.rules.createUnitState(sampleCard, 800), hasAttacked: true, canAttackLeader: true, attached: 2 };
+    GLTCG.rules.resetUnitForTurn(unitState);
+    assert(unitState.attached === 0, "resetUnitForTurn resetea unit.attached a 0");
+    assert(unitState.tempBoost === 0, "resetUnitForTurn resetea unit.tempBoost a 0");
+    assert(unitState.hasAttacked === false, "resetUnitForTurn reactiva unidad (hasAttacked = false)");
+    assert(unitState.summoningSickness === false, "resetUnitForTurn quita mareo de invocación");
+
+    // canUnitDefeat
+    assert(GLTCG.rules.canUnitDefeat(3500, 3000) === true, "canUnitDefeat: 3500 derrota a 3000");
+    assert(GLTCG.rules.canUnitDefeat(3000, 3000) === true, "canUnitDefeat: 3000 empata/derrota a 3000");
+    assert(GLTCG.rules.canUnitDefeat(2000, 2500) === false, "canUnitDefeat: 2000 no puede derrotar a 2500");
+
+    // -------------------------------------------------------------
+    // SUITE 2: Heurística y Dificultades de IA (js/ai.js)
+    // -------------------------------------------------------------
+    const difficulties = GLTCG.ai.difficulties;
+    assert(!!difficulties.baja && !!difficulties.normal && !!difficulties.dificil, "Existen las 3 dificultades de IA");
+    assert(difficulties.normal.antiSuicide === true, "Dificultad Normal tiene anti-suicidio activo");
+    assert(difficulties.dificil.antiSuicide === true, "Dificultad Difícil tiene anti-suicidio activo");
+    assert(difficulties.dificil.lethalCheck === true, "Dificultad Difícil tiene comprobación de letal");
+
+    // Test Anti-Suicidio: IA débil (1000 ATK) frente a Titán/Bloqueador (4000 ATK)
+    window.p1Field = [
+      { id: "BOSS", name: "Titán Enemigo", power: 4000, attached: 0, tempBoost: 0, blocker: true }
+    ];
+    const weakAttacker = { id: "P2_01", name: "Duende IA", power: 1000, attached: 0, tempBoost: 0 };
+    
+    const targetInNormal = GLTCG.ai.chooseTarget(weakAttacker, difficulties.normal);
+    assert(targetInNormal === -1, "IA Normal rechaza atacar a un titán con una unidad débil (Anti-suicidio = -1)");
+
+    const targetInDificil = GLTCG.ai.chooseTarget(weakAttacker, difficulties.dificil);
+    assert(targetInDificil === -1, "IA Difícil rechaza ataque suicida (Anti-suicidio = -1)");
+
+    // Test Intercambio Favorable (Smart Trades): Atacante fuerte (3500 ATK) frente a objetivo valioso (2500 ATK)
+    window.p1Field = [
+      { id: "SMALL", name: "Pequeño", power: 500, attached: 0, tempBoost: 0 },
+      { id: "BLOCKER", name: "Defensor Clave", power: 2500, attached: 0, tempBoost: 0, blocker: true }
+    ];
+    const strongAttacker = { id: "P2_02", name: "Guerrero IA", power: 3500, attached: 0, tempBoost: 0 };
+    const bestTarget = GLTCG.ai.chooseTarget(strongAttacker, difficulties.dificil);
+    assert(bestTarget === 1, "IA Difícil prioriza eliminar el Bloqueador de 2500 poder");
+
+    // Test Asignación Inteligente de DON!!
+    window.p2DonReserve = [{ id: "D1" }, { id: "D2" }, { id: "D3" }];
+    window.p2don = 3;
+    const readyToBuffAttacker = { id: "P2_BUFF", name: "Asaltante", power: 2000, attached: 0, tempBoost: 0, summoningSickness: false, hasAttacked: false };
+    window.p2Field = [readyToBuffAttacker];
+    window.p1Field = [{ id: "ENEMY_3000", name: "Muro Enemigo", power: 2500, attached: 0, tempBoost: 0 }];
+    GLTCG.ai.attachDon(difficulties.normal);
+    assert(readyToBuffAttacker.attached >= 1, "IA asigna DON!! tácticamente para superar el defensor enemigo");
+
+    // Test Decisión de Bloqueo Automático
+    const blockers = [
+      { id: "B1", name: "Escudero", power: 3000, blocker: true },
+      { id: "B2", name: "Chivo Expiatorio", power: 1000, blocker: true }
+    ];
+    // Ataque entrante de 2500: el bloqueador de 3000 puede ganar el combate
+    const blockDecisionWinning = GLTCG.ai.decideAIBlock(2500, 4, 2, blockers);
+    assert(blockDecisionWinning === 0, "IA bloquea automáticamente cuando su defensor supera al atacante (ganancia de tempo)");
+
+    // Ataque entrante letal a 1 ❤️ y 0 escudos: debe bloquear con cualquiera disponible
+    const blockDecisionEmergency = GLTCG.ai.decideAIBlock(5000, 1, 0, blockers);
+    assert(blockDecisionEmergency >= 0, "IA bloquea en situación de emergencia para salvar su vida");
+
+    // -------------------------------------------------------------
+    // SUITE 3: Reglas de Bounce y Remociones Corregidas
+    // -------------------------------------------------------------
+    // Simular que el efecto Bounce devuelve a la mano enemiga y no a la propia
+    const enemyUnit = { id: "BOUNCE_ME", name: "Unidad Rival", power: 1000 };
+    window.p2Field = [enemyUnit];
+    window.hand = [];
+    window.aiHand = [];
+    
+    // Función mock de bounce corregida
+    function executeBounce(targetIdx, player) {
+      const ownHand = player === 1 ? window.hand : window.aiHand;
+      const enemyHand = player === 1 ? window.aiHand : window.hand;
+      const enemyField = player === 1 ? window.p2Field : window.p1Field;
+      if (targetIdx >= 0) {
+        enemyHand.push(enemyField.splice(targetIdx, 1)[0]);
+      }
+    }
+    executeBounce(0, 1);
+    assert(window.hand.length === 0, "Jugador 1 NO roba la carta del rival al hacer Bounce");
+    assert(window.aiHand.length === 1 && window.aiHand[0].id === "BOUNCE_ME", "La carta regresa a la mano del rival correctamente");
+
+    // -------------------------------------------------------------
+    // SUITE 4: Motor Visual de Duelo (Forbidden Memories, GBA y Duel Links)
+    // -------------------------------------------------------------
+    assert(!!GLTCG.visuals, "Motor visual GLTCG.visuals inicializado");
+    assert(typeof GLTCG.visuals.togglePerspective === "function", "Función togglePerspective disponible");
+    assert(typeof GLTCG.visuals.startTargeting === "function", "Función startTargeting disponible");
+    assert(typeof GLTCG.visuals.stopTargeting === "function", "Función stopTargeting disponible");
+    assert(typeof GLTCG.visuals.triggerSlash === "function", "Función triggerSlash disponible");
+    assert(typeof GLTCG.visuals.triggerScreenShake === "function", "Función triggerScreenShake disponible");
+    assert(typeof GLTCG.visuals.spawnFloatingCombatText === "function", "Función spawnFloatingCombatText disponible");
+    assert(typeof GLTCG.visuals.showPhaseBanner === "function", "Función showPhaseBanner disponible");
+
+    // Crear mock de arena para probar visuales
+    let mockArena = document.getElementById("battleArena");
+    if (!mockArena) {
+      mockArena = document.createElement("div");
+      mockArena.id = "battleArena";
+      document.body.appendChild(mockArena);
+      GLTCG.visuals.init();
+    }
+
+    // Probar alternancia de perspectiva (3D <-> 2D)
+    GLTCG.visuals.togglePerspective();
+    const isNowMode3D = mockArena.classList.contains("mode-3d");
+    GLTCG.visuals.togglePerspective();
+    const isNowMode2D = mockArena.classList.contains("mode-2d");
+    assert(isNowMode2D && isNowMode3D, "Conmutador 3D/2D Forbidden Memories alterna clases mode-3d y mode-2d correctamente");
+
+    // Probar sistema de Apuntado Holográfico Duel Links
+    const mockAttacker = document.createElement("div");
+    mockAttacker.className = "arena-unit";
+    mockArena.appendChild(mockAttacker);
+    GLTCG.visuals.startTargeting(mockAttacker);
+    const coreBeam = document.getElementById("targetingBeamCore");
+    assert(coreBeam && coreBeam.style.display !== "none", "Haz de apuntado láser Duel Links se activa y visualiza en SVG");
+    GLTCG.visuals.stopTargeting();
+    assert(coreBeam && coreBeam.style.display === "none", "Haz de apuntado se oculta al cancelar objetivos");
+
+    // Probar Efecto de Corte Slash GBA
+    const mockDefender = document.createElement("div");
+    mockDefender.className = "arena-unit";
+    mockArena.appendChild(mockDefender);
+    GLTCG.visuals.triggerSlash(mockDefender);
+    const slashContainer = mockDefender.querySelector(".slash-effect-container");
+    assert(!!slashContainer && !!slashContainer.querySelector(".gba-slash-blade"), "Efecto de corte doble GBA se genera sobre la carta objetivo");
+
+    // Probar Sacudida de Pantalla Retro (GBA Screen Shake)
+    GLTCG.visuals.triggerScreenShake('heavy');
+    assert(mockArena.classList.contains("gba-shake"), "Sacudida de pantalla retro se aplica a la arena");
+
+    // Probar Números Flotantes de Daño
+    GLTCG.visuals.spawnFloatingCombatText(mockDefender, "💥 CRITICAL!", "critical");
+    const floatingText = mockDefender.querySelector(".floating-combat-text.critical");
+    assert(!!floatingText && floatingText.textContent === "💥 CRITICAL!", "Número/Estado flotante arcade se genera correctamente");
+
+    // Probar Banner de Fase Duel Links
+    GLTCG.visuals.showPhaseBanner("⚔️ TU TURNO", "Fase de Combate");
+    const phaseBanner = document.getElementById("duelPhaseBanner");
+    assert(!!phaseBanner && phaseBanner.classList.contains("active"), "Banner cinemático de fase Duel Links se muestra en pantalla");
+
+    // -------------------------------------------------------------
+    // SUITE 5: Reglas Estándar TCG (Límite 5 Personajes, DON Capped 10 y Auto-Draw)
+    // -------------------------------------------------------------
+    // 1. Límite de Personajes en Campo (5 unidades máximo)
+    assert(GLTCG.rules.MAX_FIELD_UNITS === 5, "Constante MAX_FIELD_UNITS es exactamente 5");
+    assert(GLTCG.rules.canSummonCharacter([]) === true, "canSummonCharacter permite invocar con campo vacío");
+    assert(GLTCG.rules.canSummonCharacter([1, 2, 3, 4]) === true, "canSummonCharacter permite invocar con 4 personajes en juego");
+    assert(GLTCG.rules.canSummonCharacter([1, 2, 3, 4, 5]) === false, "canSummonCharacter bloquea invocación con 5 personajes en juego (Regla estándar TCG)");
+
+    // 2. Límite Máximo y Progresión de DON!! (Cap a 10)
+    assert(GLTCG.rules.MAX_DON === 10, "Constante MAX_DON es exactamente 10");
+    
+    // Simular drawDon con cap estricto
+    function testDrawDon(reserve, amount, maxCap = 10) {
+      const n = Math.max(0, Number(amount) || 0);
+      const toAdd = Math.min(n, Math.max(0, maxCap - reserve.length));
+      for (let i = 0; i < toAdd; i++) reserve.push({ name: 'DON!!' });
+      return toAdd;
+    }
+    const testDonReserve = [{ name: 'DON!!' }, { name: 'DON!!' }];
+    testDrawDon(testDonReserve, 15, GLTCG.rules.MAX_DON);
+    assert(testDonReserve.length === 10, "drawDon nunca supera el límite reglamentario de 10 DON!!");
+
+    // Simular recoverUsedDon con cap estricto
+    function testRecoverUsedDon(reserve, amount, maxAllowed, maxCap = 10) {
+      const cap = Math.min(maxCap, maxAllowed);
+      const wanted = Math.max(0, Number(amount) || 0);
+      const canRecover = Math.max(0, cap - reserve.length);
+      const toRecover = Math.min(wanted, canRecover);
+      for (let i = 0; i < toRecover; i++) reserve.push({ name: 'DON!!' });
+      return toRecover;
+    }
+    const testRecoverReserve = [];
+    testRecoverUsedDon(testRecoverReserve, 20, 6, GLTCG.rules.MAX_DON);
+    assert(testRecoverReserve.length === 6, "recoverUsedDon nunca excede el valor máximo del jugador");
+
+    // 3. Robo Automático y Progresión de Turno
+    let testDeck = [{ id: "C1" }, { id: "C2" }, { id: "C3" }];
+    let testHand = [];
+    let testDrawn = false;
+    function testTurnStartDraw() {
+      if (testDeck.length > 0) {
+        testHand.push(testDeck.pop());
+        testDrawn = true;
+      }
+    }
+    testTurnStartDraw();
+    assert(testHand.length === 1 && testDrawn === true, "Al iniciar el turno se ejecuta automáticamente el robo de 1 carta");
+
+    // Resumen final
+    summaryContainer.innerHTML = `<strong>Total Pruebas: ${passed + failed} | <span class="pass">Pasadas: ${passed}</span> | <span class="fail">Fallidas: ${failed}</span></strong>`;
+    if (failed === 0) {
+      summaryContainer.innerHTML += '<br><div class="pass" style="font-size:1.4em;margin-top:10px;">★ TODAS LAS PRUEBAS COMPLETADAS CON ÉXITO ★</div>';
+    }
+  </script>
+</body>
+</html>

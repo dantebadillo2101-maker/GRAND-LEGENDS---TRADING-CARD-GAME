@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Verificación de Sintaxis y Carga de Scripts - Grand Legends TCG</title>
+</head>
+<body>
+  <div id="status">Iniciando verificación...</div>
+  <script>
+    window.errors = [];
+    window.onerror = function(msg, url, line, col, err) {
+      const info = msg + ' en ' + (url ? url.split('/').pop() : 'desconocido') + ':' + line;
+      window.errors.push(info);
+      document.getElementById('status').innerText = 'ERROR: ' + info;
+    };
+  </script>
+  <!-- Scripts del juego en orden exacto de index.html -->
+  <script src="../js/cards.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/packs.js"></script>
+  <script src="../js/accounts.js"></script>
+  <script src="../js/online.js"></script>
+  <script src="../js/duel-visuals.js"></script>
+  <script src="../js/game.js"></script>
+  <script>
+    (function() {
+      const statusDiv = document.getElementById('status');
+      if (window.errors.length === 0) {
+        const requiredFns = [
+          'openLocalMode',
+          'closeLocalMode',
+          'openMainMenu',
+          'closeMainMenu',
+          'openDeckBuilderFromMenu',
+          'openPack',
+          'closePack',
+          'openSets',
+          'closeSets',
+          'openPlayerHub',
+          'closePlayerHub',
+          'attackCharacterWithLeader',
+          'attackLeaderWithLeader'
+        ];
+        const missing = requiredFns.filter(fn => typeof window[fn] !== 'function');
+        if (missing.length === 0) {
+          statusDiv.innerText = 'SUCCESS: Todos los scripts compilaron limpiamente y todas las funciones de la UI están disponibles!';
+          statusDiv.style.color = 'green';
+        } else {
+          statusDiv.innerText = 'FAIL: Funciones faltantes en window: ' + missing.join(', ');
+          statusDiv.style.color = 'red';
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
