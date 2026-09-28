@@ -5,7 +5,6 @@ Juego de cartas coleccionables por turnos preparado para publicarse como sitio w
 ---
 
 ## 📢 Novedades y Avisos (v6.8.4)
-- **Campo de Duelo 3D "Forbidden Memories"**: Perspectiva tridimensional con estética de piedra monolítica, runas doradas y conmutador para alternar a vista clásica 2D.
 - **Efectos y Animaciones de Combate**: Animaciones de doble corte (*Slash*), sacudida de pantalla retro (*Screen Shake*) y números de combate flotantes inspirados en Pokémon GBA.
 - **Apuntado Holográfico "Duel Links"**: Rayo láser SVG en tiempo real desde el atacante al cursor u objetivo enemigo, y retículas de blanco.
 - **Reglas Estándar Oficiales del TCG**:
